@@ -8,6 +8,7 @@ import 'package:receive_sharing_intent/receive_sharing_intent.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:photo_view/photo_view.dart';
+import 'package:share_plus/share_plus.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -56,10 +57,19 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   String _statusMessage = 'SYSTEM READY [v1.0.0]';
   String _updateStatus = 'Checking updates...';
   StreamSubscription<dynamic>? _shareSub;
+  final List<String> _logs = [];
+
+  void _log(String message) {
+    final ts = DateTime.now().toString().substring(0, 19);
+    _logs.add('[$ts] $message');
+    if (_logs.length > 200) _logs.removeAt(0);
+    debugPrint('[DebDown+] $message');
+  }
 
   @override
   void initState() {
     super.initState();
+    _log('App started v1.0.0');
     _requestPermissions();
     _checkForUpdates();
     _initShareIntent();
@@ -140,6 +150,26 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       setState(() {
         _statusMessage = '[ERROR] Please enter a valid URL!';
       });
+      _log('ERROR: empty URL');
+      return;
+    }
+    _log('Download request: $url (format: $_selectedFormat)');
+
+    // Platform check: engine ini (youtube_explode_dart) hanya mendukung YouTube
+    final uri = Uri.tryParse(url);
+    final host = uri?.host.toLowerCase() ?? '';
+    final isYt = host.contains('youtube.com') ||
+        host.contains('youtu.be') ||
+        host.contains('youtube-nocookie.com');
+    final isPlainId =
+        host.isEmpty && RegExp(r'^[A-Za-z0-9_-]{11}$').hasMatch(url);
+    if (!isYt && !isPlainId) {
+      setState(() {
+        _isDownloading = false;
+        _statusMessage =
+            '[INFO] $host belum didukung (engine ini YouTube-only). TikTok/IG menyusul di update berikutnya.';
+      });
+      _log('Unsupported platform: $host');
       return;
     }
 
@@ -152,6 +182,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     try {
       final yt = yt_lib.YoutubeExplode();
       setState(() => _statusMessage = 'Parsing media manifest...');
+      _log('YoutubeExplode initialized');
       
       setState(() {
         _statusMessage = 'Resolving DNS (retry) & extracting media info...';
@@ -172,6 +203,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           setState(() {
             _statusMessage = 'Network retry $attempt/$maxRetries...';
           });
+          _log('Retry $attempt/$maxRetries: $e');
           await Future<void>.delayed(const Duration(seconds: 2));
         }
       }
@@ -179,6 +211,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       // After loop: video & manifest are guaranteed non-null (rethrow on last attempt)
       final resolvedVideo = video!;
       final resolvedManifest = manifest!;
+      _log('Video found: ${resolvedVideo.title} (${resolvedVideo.duration})');
 
       setState(() => _statusMessage = 'Downloading ${_selectedFormat.toUpperCase()} stream...');
 
@@ -199,7 +232,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
       File file;
       if (_selectedFormat == 'mp4') {
-        var streamInfo = resolvedManifest.videoOnly.withHighestBitrate();
+        // MUXED stream = video + audio dalam satu file (ADA SUARANYA)
+        var streamInfo;
+        final muxed = resolvedManifest.muxed;
+        if (muxed.isNotEmpty) {
+          streamInfo = muxed.withHighestBitrate();
+          _log('Using muxed stream (video+audio): ${streamInfo.videoQuality.label}');
+        } else {
+          streamInfo = resolvedManifest.videoOnly.withHighestBitrate();
+          _log('WARNING: no muxed stream available, fallback videoOnly (no audio)');
+        }
         var stream = yt.videos.streamsClient.get(streamInfo);
         file = File('${downloadDir?.path}/$customName.mp4');
         
@@ -219,6 +261,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         await outputStream.close();
       } else {
         var streamInfo = resolvedManifest.audioOnly.withHighestBitrate();
+        _log('Using audioOnly stream: ${streamInfo.audioQuality.label}');
         var stream = yt.videos.streamsClient.get(streamInfo);
         file = File('${downloadDir?.path}/$customName.mp3');
         
@@ -243,16 +286,19 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         _isDownloading = false;
         _statusMessage = '[SUCCESS] Saved to: ${file.path}';
       });
+      _log('SUCCESS: ${file.path} (${(file.lengthSync() / 1048576).toStringAsFixed(1)} MB)');
     } on SocketException catch (e) {
       setState(() {
         _isDownloading = false;
         _statusMessage = '[NETWORK ERROR] DNS lookup failed: ${e.message}. Check internet/DNS & retry.';
       });
+      _log('NETWORK ERROR (SocketException): ${e.message}');
     } catch (e) {
       setState(() {
         _isDownloading = false;
         _statusMessage = '[ERROR] Failed: ${e.toString()}';
       });
+      _log('DOWNLOAD ERROR: $e');
     }
   }
 
@@ -330,7 +376,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 ),
                 SizedBox(height: 4),
                 Text(
-                  'Supports YouTube, TikTok, IG & 1000+ sites. Unlimited direct download.',
+                  'YouTube Downloader • MP4 (Video+Audio) / MP3 • Unlimited Direct Download',
                   style: TextStyle(color: Colors.grey, fontSize: 12),
                 ),
               ],
@@ -343,7 +389,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             controller: _urlController,
             style: const TextStyle(color: Color(0xFF39FF14)),
             decoration: const InputDecoration(
-              labelText: 'Paste Link (YT / TikTok / IG)',
+              labelText: 'Paste YouTube Link',
               labelStyle: TextStyle(color: Colors.grey),
               enabledBorder: OutlineInputBorder(
                 borderSide: BorderSide(color: Color(0xFF39FF14)),
@@ -526,9 +572,121 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             'Tap image to Zoom QR DANA',
             style: TextStyle(color: Colors.grey, fontSize: 11),
           ),
+          const SizedBox(height: 30),
+
+          // ===== SYSTEM LOGS PANEL =====
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              border: Border.all(color: const Color(0xFF39FF14)),
+              color: const Color(0xFF080C08),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Text(
+                      '// SYSTEM LOGS',
+                      style: TextStyle(
+                        color: Color(0xFFAF82FF),
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1.5,
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      '${_logs.length} entries',
+                      style: const TextStyle(color: Colors.grey, fontSize: 10),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  height: 140,
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey[800]!),
+                    color: const Color(0xFF050505),
+                  ),
+                  child: _logs.isEmpty
+                      ? const Text(
+                          'No logs yet...',
+                          style: TextStyle(color: Colors.grey, fontSize: 11),
+                        )
+                      : ListView.builder(
+                          reverse: true,
+                          itemCount: _logs.length,
+                          itemBuilder: (context, index) {
+                            final log = _logs[_logs.length - 1 - index];
+                            final isError = log.contains('ERROR');
+                            return Text(
+                              log,
+                              style: TextStyle(
+                                color: isError
+                                    ? const Color(0xFFFF5555)
+                                    : const Color(0xFF39FF14),
+                                fontSize: 10,
+                              ),
+                            );
+                          },
+                        ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 15),
+
+          // ===== SHARE LOGS BUTTON =====
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF39FF14),
+                foregroundColor: Colors.black,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+              onPressed: _shareLogs,
+              icon: const Icon(Icons.ios_share, size: 18),
+              label: const Text(
+                'SHARE LOGS.TXT',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Kirim file log ke developer untuk analisa error',
+            style: TextStyle(color: Colors.grey, fontSize: 11),
+          ),
         ],
       ),
     );
+  }
+
+  Future<void> _shareLogs() async {
+    _log('Share logs requested (${_logs.length} entries)');
+    try {
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/debdown_logs.txt');
+      final header = 'DEBDOWN+ v1.0.0 - SYSTEM LOGS\n'
+          'Generated: ${DateTime.now()}\n'
+          'Device: ${Platform.operatingSystem} ${Platform.operatingSystemVersion}\n'
+          '${'=' * 40}\n\n';
+      await file.writeAsString(header + _logs.join('\n'));
+      _log('Logs written to ${file.path}');
+      await Share.shareXFiles(
+        [XFile(file.path, mimeType: 'text/plain')],
+        text: 'DebDown+ v1.0.0 logs - please analyze',
+      );
+    } catch (e) {
+      _log('SHARE LOGS ERROR: $e');
+      setState(() {
+        _statusMessage = '[ERROR] Failed to share logs: $e';
+      });
+    }
   }
 }
 
