@@ -158,6 +158,15 @@ class _HomeScreenState extends State<HomeScreen>
       }
       return;
     }
+    if (type == 'dir') {
+      // Fallback storage: file disimpan di folder app, bukan Download/
+      final path = m['path'] ?? '';
+      setState(() {
+        _setStatus('[INFO] Download/ terkunci. File akan disimpan di: $path');
+      });
+      _log('DIR FALLBACK: $path (aktifkan All Files Access biar simpan di Download/)');
+      return;
+    }
     if (type == 'download') {
       final status = m['status'];
       final line = m['line'];
@@ -193,10 +202,19 @@ class _HomeScreenState extends State<HomeScreen>
 
   // ===== PERMISSIONS =====
   Future<void> _requestPermissions() async {
-    await [
-      Permission.storage,
-      Permission.manageExternalStorage,
-    ].request();
+    var storage = await Permission.storage.status;
+    if (!storage.isGranted) storage = await Permission.storage.request();
+
+    var manage = await Permission.manageExternalStorage.status;
+    if (!manage.isGranted) manage = await Permission.manageExternalStorage.request();
+
+    if (manage.isGranted) {
+      _log('Storage: All Files Access GRANTED');
+    } else if (storage.isGranted) {
+      _log('Storage: partial (media only) — Download/ mungkin butuh All Files Access');
+    } else {
+      _log('Storage: NOT granted (fallback ke folder app otomatis)');
+    }
   }
 
   // ===== SHARE INTENT =====

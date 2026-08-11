@@ -160,14 +160,41 @@ class MainActivity : FlutterActivity() {
 
                 "defaultDir" -> {
                     try {
-                        val base = File(
+                        // Coba folder publik Download/DebDown+ dulu
+                        var base = File(
                             Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
                             "DebDown+"
                         )
-                        base.mkdirs()
-                        result.success(base.absolutePath)
+                        var path = base.absolutePath
+
+                        // Verifikasi beneran bisa ditulis (mkdirs bisa gagal diam-diam kalau ga ada permission)
+                        val writable = try {
+                            if (!base.exists()) base.mkdirs()
+                            val probe = File(path, ".probe")
+                            probe.createNewFile()
+                            probe.delete()
+                            true
+                        } catch (e: Exception) {
+                            false
+                        }
+
+                        if (!writable) {
+                            // Fallback: folder app sendiri (GA PERLU permission, selalu bisa ditulis)
+                            val alt = File(getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), "DebDown+")
+                            alt.mkdirs()
+                            path = alt.absolutePath
+                            runOnUiThread {
+                                progressSink?.success(
+                                    mapOf("type" to "dir", "fallback" to true, "path" to path)
+                                )
+                            }
+                        }
+                        result.success(path)
                     } catch (e: Exception) {
-                        result.error("DIR", e.message ?: "cannot resolve download dir", null)
+                        // Fallback terakhir: internal cache
+                        val alt = File(cacheDir, "DebDown+")
+                        alt.mkdirs()
+                        result.success(alt.absolutePath)
                     }
                 }
 
