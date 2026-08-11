@@ -30,13 +30,12 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Install Android Build Tools (for zipalign/apksigner)
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq android-sdk-build-tools-34.0.0
-          export ANDROID_BUILD_TOOLS=/usr/lib/android-sdk/build-tools/34.0.0
-          echo "$ANDROID_BUILD_TOOLS" >> $GITHUB_PATH
-          echo "ANDROID_HOME=/usr/lib/android-sdk" >> $GITHUB_ENV
+      - name: Set up Android SDK (for zipalign/apksigner)
+        uses: android-actions/setup-android@v3
+        with:
+          api-level: 34
+          build-tools-version: '34.0.0'
+          emulator: false
 
       - name: Initialize Flutter Project Scaffolding
         run: |
