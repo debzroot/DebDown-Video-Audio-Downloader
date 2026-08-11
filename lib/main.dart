@@ -73,7 +73,7 @@ class _HomeScreenState extends State<HomeScreen>
   String _statusMessage = 'SYSTEM READY [v1.3.1]';
   final List<String> _statusLog = ['SYSTEM READY [v1.3.1]'];
   bool _showComplete = false;
-  Timer? _completeTimer;
+  String _lastSavedPath = 'Download/DebDown+';
   String _engineStatus = 'ENGINE INIT...';
   final List<String> _logs = [];
   late final AnimationController _cursorCtrl;
@@ -102,7 +102,6 @@ class _HomeScreenState extends State<HomeScreen>
 
   @override
   void dispose() {
-    _completeTimer?.cancel();
     _shareSub?.cancel();
     _ytdlSub?.cancel();
     _cursorCtrl.dispose();
@@ -252,7 +251,6 @@ class _HomeScreenState extends State<HomeScreen>
       _setStatus('⚡DebDown+ initializing...');
       _showComplete = false;
     });
-    _completeTimer?.cancel();
 
     try {
       final dir = await _ytdl.invokeMethod<String>('defaultDir');
@@ -268,11 +266,8 @@ class _HomeScreenState extends State<HomeScreen>
         _isDownloading = false;
         _downloadProgress = 1.0;
         _setStatus('[SUCCESS] Saved to: $dir');
+        _lastSavedPath = dir;
         _showComplete = true;
-      });
-      _completeTimer?.cancel();
-      _completeTimer = Timer(const Duration(milliseconds: 2600), () {
-        if (mounted) setState(() => _showComplete = false);
       });
       _log('SUCCESS: saved to $dir');
     } on PlatformException catch (e) {
@@ -398,34 +393,9 @@ class _HomeScreenState extends State<HomeScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-          const SizedBox(height: 30),
-          // Glitch banner
-          GlassPanel(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const GlitchText(
-                  text: '// ⚡DEBDOWN+ ENGINE v1.3.1',
-                  style: TextStyle(
-                    color: kPurple,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'TikTok • Instagram • X • Facebook • SoundCloud • 1000+ situs\n'
-                  'MP4 / MP3 • Playlist • Subtitle • Auto-Update',
-                  style: TextStyle(
-                    color: Colors.grey.shade400,
-                    fontSize: 11,
-                    height: 1.5,
-                  ),
-                ),
-              ],
-            ),
-          ),
+          const SizedBox(height: 8),
+          // Glitch banner (port dari New_file.txt - Compose GlitchBanner)
+          const GlitchBanner(),
           const SizedBox(height: 16),
 
           // CARA PAKAI button
@@ -496,10 +466,19 @@ class _HomeScreenState extends State<HomeScreen>
             statusLog: _statusLog,
             cursorCtrl: _cursorCtrl,
           ),
+          const SizedBox(height: 20),
+
+          // Supported platform icons (isi area kosong bawah)
+          const _PlatformGrid(),
+          const SizedBox(height: 12),
             ],
           ),
         ),
-        if (_showComplete) const DownloadCompleteOverlay(),
+        if (_showComplete)
+          DownloadCompleteOverlay(
+            path: _lastSavedPath,
+            onClose: () => setState(() => _showComplete = false),
+          ),
       ],
     );
   }
@@ -798,6 +777,255 @@ class _GlitchTextState extends State<GlitchText> {
       ],
     );
   }
+}
+
+// ===== SUPPORTED PLATFORM GRID (YT / IG / TikTok / dll) =====
+class _PlatformGrid extends StatelessWidget {
+  const _PlatformGrid();
+
+  static const _platforms = [
+    (icon: Icons.play_circle_fill, color: Color(0xFFFF0033), label: 'YouTube'),
+    (icon: Icons.music_note, color: Color(0xFF25F4EE), label: 'TikTok'),
+    (icon: Icons.camera_alt, color: Color(0xFFE1306C), label: 'Instagram'),
+    (icon: Icons.close, color: Colors.white, label: 'X / Twitter'),
+    (icon: Icons.facebook, color: Color(0xFF1877F2), label: 'Facebook'),
+    (icon: Icons.graphic_eq, color: Color(0xFFFF5500), label: 'SoundCloud'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        const GlitchText(
+          text: '// SUPPORTED PLATFORMS',
+          style: TextStyle(
+            color: kPurple,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1.5,
+            fontSize: 11,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            for (var i = 0; i < 3; i++) ...[
+              Expanded(child: _PlatformChip(data: _platforms[i])),
+              if (i < 2) const SizedBox(width: 10),
+            ],
+          ],
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            for (var i = 3; i < 6; i++) ...[
+              Expanded(child: _PlatformChip(data: _platforms[i])),
+              if (i < 5) const SizedBox(width: 10),
+            ],
+          ],
+        ),
+        const SizedBox(height: 10),
+        Text(
+          '+ 1000 situs lainnya 🚀',
+          style: TextStyle(
+            fontFamily: kMono,
+            color: Colors.grey.shade500,
+            fontSize: 10,
+            letterSpacing: 1,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PlatformChip extends StatelessWidget {
+  final (IconData, Color, String) data;
+
+  const _PlatformChip({required this.data});
+
+  @override
+  Widget build(BuildContext context) {
+    final icon = data.$1;
+    final color = data.$2;
+    final label = data.$3;
+    return GlassPanel(
+      padding: const EdgeInsets.symmetric(vertical: 14),
+      borderColor: color.withOpacity(0.4),
+      glowColor: color.withOpacity(0.15),
+      radius: 12,
+      blur: 8,
+      child: Column(
+        children: [
+          Icon(
+            icon,
+            color: color,
+            size: 26,
+            shadows: [Shadow(color: color.withOpacity(0.6), blurRadius: 10)],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: TextStyle(
+              fontFamily: kMono,
+              color: Colors.grey.shade300,
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ===== GLITCH BANNER (port dari New_file.txt - Compose GlitchBanner) =====
+class GlitchBanner extends StatefulWidget {
+  const GlitchBanner({super.key});
+
+  @override
+  State<GlitchBanner> createState() => _GlitchBannerState();
+}
+
+class _GlitchBannerState extends State<GlitchBanner>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 3),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      height: 150,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: kCyan.withOpacity(0.5)),
+        // SOLID background (dari Compose: Color(0xFF121826))
+        color: const Color(0xFF121826),
+        boxShadow: [
+          BoxShadow(color: kCyan.withOpacity(0.15), blurRadius: 24),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(15),
+        child: AnimatedBuilder(
+          animation: _ctrl,
+          builder: (_, __) {
+            final t = _ctrl.value;
+            // posisi scan line: 20 + (h-40) * (0.5 + 0.5*sin(phase*2π))
+            final y1 =
+                20 + (150 - 40) * (0.5 + 0.5 * math.sin(t * 2 * math.pi));
+            final y2 = 20 +
+                (150 - 40) * (0.5 + 0.5 * math.sin(t * 3 * math.pi + 1.5));
+            // opacity pulse subtitle: 0.7 + 0.3*sin(phase*4π)
+            final pulse =
+                (0.7 + 0.3 * math.sin(t * 4 * math.pi)).clamp(0.0, 1.0);
+            return Stack(
+              children: [
+                Positioned.fill(
+                  child: CustomPaint(
+                    painter: _GlitchBannerPainter(y1: y1, y2: y2),
+                  ),
+                ),
+                Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // gradient text (green -> cyan -> purple)
+                      ShaderMask(
+                        shaderCallback: (bounds) =>
+                            const LinearGradient(
+                              colors: [kGreen, kCyan, kPurple],
+                            ).createShader(bounds),
+                        child: const Text(
+                          '// ⚡ DebDown+',
+                          style: TextStyle(
+                            fontFamily: kMono,
+                            fontSize: 30,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 4,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      // pulsing subtitle
+                      Opacity(
+                        opacity: pulse,
+                        child: const Text(
+                          '🚀 Video / Audio Downloader 🔥',
+                          style: TextStyle(
+                            fontFamily: kMono,
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 1.5,
+                            color: kOrange,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _GlitchBannerPainter extends CustomPainter {
+  final double y1;
+  final double y2;
+
+  _GlitchBannerPainter({required this.y1, required this.y2});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // grid
+    final gridPaint = Paint()
+      ..color = kCyan.withOpacity(0.08)
+      ..strokeWidth = 1;
+    for (double gx = 0; gx < size.width; gx += 30) {
+      canvas.drawLine(Offset(gx, 0), Offset(gx, size.height), gridPaint);
+    }
+    for (double gy = 0; gy < size.height; gy += 30) {
+      canvas.drawLine(Offset(0, gy), Offset(size.width, gy), gridPaint);
+    }
+    // scan lines
+    canvas.drawLine(
+      Offset(0, y1),
+      Offset(size.width, y1),
+      Paint()
+        ..color = kGreen.withOpacity(0.9)
+        ..strokeWidth = 2.5,
+    );
+    canvas.drawLine(
+      Offset(0, y2),
+      Offset(size.width, y2),
+      Paint()
+        ..color = kPurple.withOpacity(0.8)
+        ..strokeWidth = 2,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _GlitchBannerPainter old) =>
+      old.y1 != y1 || old.y2 != y2;
 }
 
 // ===== GLASS PANEL (glassmorphism from base.css) =====
@@ -1568,7 +1796,14 @@ class _CornerBrackets extends StatelessWidget {
 
 // ===== DOWNLOAD COMPLETE OVERLAY =====
 class DownloadCompleteOverlay extends StatefulWidget {
-  const DownloadCompleteOverlay({super.key});
+  final String path;
+  final VoidCallback onClose;
+
+  const DownloadCompleteOverlay({
+    super.key,
+    required this.path,
+    required this.onClose,
+  });
 
   @override
   State<DownloadCompleteOverlay> createState() =>
@@ -1584,7 +1819,7 @@ class _DownloadCompleteOverlayState extends State<DownloadCompleteOverlay>
     super.initState();
     _ctrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1900),
+      duration: const Duration(milliseconds: 900),
     )..forward();
   }
 
@@ -1597,45 +1832,59 @@ class _DownloadCompleteOverlayState extends State<DownloadCompleteOverlay>
   @override
   Widget build(BuildContext context) {
     return Positioned.fill(
-      child: IgnorePointer(
-        child: AnimatedBuilder(
-          animation: _ctrl,
-          builder: (_, __) {
-            final t = _ctrl.value;
-            final flash =
-                t < 0.25 ? (t / 0.25) : (1 - (t - 0.25) / 0.75).clamp(0.0, 1.0);
-            final scale = t < 0.3
-                ? 0.4 + 1.4 * (t / 0.3)
-                : 1.8 - 0.8 * ((t - 0.3) / 0.25).clamp(0.0, 1.0);
-            final fade = t > 0.6 ? (1 - (t - 0.6) / 0.4).clamp(0.0, 1.0) : 1.0;
-            return Stack(
-              fit: StackFit.expand,
-              children: [
-                // green flash
-                Container(color: kGreen.withOpacity(0.18 * flash)),
-                // particles burst
-                CustomPaint(painter: _ParticlesPainter(t: t)),
-                // center content
-                Center(
-                  child: Opacity(
-                    opacity: fade,
-                    child: Transform.scale(
-                      scale: scale,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          // SOLID barrier (tidak transparan biar ga berantakan)
+          Container(color: const Color(0xFF050505)),
+          // subtle green vignette at edges
+          Center(
+            child: AnimatedBuilder(
+              animation: _ctrl,
+              builder: (_, __) {
+                final t = _ctrl.value;
+                final scale = 0.6 + 0.4 * Curves.elasticOut.transform(t);
+                return Opacity(
+                  opacity: t.clamp(0.0, 1.0),
+                  child: Transform.scale(
+                    scale: scale,
+                    child: Container(
+                      width: 300,
+                      padding: const EdgeInsets.all(26),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(20),
+                        // SOLID card background (ga transparan)
+                        color: const Color(0xFF0D160D),
+                        border: Border.all(color: kGreen, width: 1.5),
+                        boxShadow: [
+                          BoxShadow(
+                            color: kGreen.withOpacity(0.4),
+                            blurRadius: 40,
+                            spreadRadius: 2,
+                          ),
+                          BoxShadow(
+                            color: Colors.black,
+                            blurRadius: 24,
+                            offset: const Offset(0, 12),
+                          ),
+                        ],
+                      ),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
+                          // check icon glow
                           Container(
                             width: 84,
                             height: 84,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               color: kGreen.withOpacity(0.12),
-                              border: Border.all(color: kGreen, width: 2),
+                              border: Border.all(color: kGreen, width: 2.5),
                               boxShadow: [
                                 BoxShadow(
                                   color: kGreen.withOpacity(0.5),
-                                  blurRadius: 30,
-                                  spreadRadius: 4,
+                                  blurRadius: 26,
+                                  spreadRadius: 3,
                                 ),
                               ],
                             ),
@@ -1668,54 +1917,69 @@ class _DownloadCompleteOverlayState extends State<DownloadCompleteOverlay>
                               ],
                             ),
                           ),
-                          const SizedBox(height: 6),
+                          const SizedBox(height: 10),
                           Text(
-                            'FILE SAVED TO DOWNLOAD/DEBDOWN+',
+                            widget.path,
+                            textAlign: TextAlign.center,
                             style: TextStyle(
                               fontFamily: kMonoTerminal,
-                              fontSize: 9,
-                              letterSpacing: 1,
+                              fontSize: 10,
+                              letterSpacing: 0.5,
                               color: Colors.grey.shade400,
+                              height: 1.5,
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          // CLOSE button (compact)
+                          GestureDetector(
+                            onTap: widget.onClose,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 26,
+                                vertical: 10,
+                              ),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(10),
+                                color: kGreen.withOpacity(0.12),
+                                border: Border.all(color: kGreen, width: 1.2),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: kGreen.withOpacity(0.3),
+                                    blurRadius: 14,
+                                  ),
+                                ],
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.close, color: kGreen, size: 16),
+                                  SizedBox(width: 7),
+                                  Text(
+                                    'CLOSE',
+                                    style: TextStyle(
+                                      fontFamily: kMono,
+                                      color: kGreen,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: 1.5,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ],
                       ),
                     ),
                   ),
-                ),
-              ],
-            );
-          },
-        ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
-}
-
-class _ParticlesPainter extends CustomPainter {
-  final double t; // 0..1
-
-  _ParticlesPainter({required this.t});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (t > 0.55) return;
-    final center = Offset(size.width / 2, size.height / 2 - 40);
-    const n = 16;
-    for (var i = 0; i < n; i++) {
-      final a = (i / n) * 2 * math.pi;
-      final dist = 60 + 140 * (t / 0.55);
-      final p = Offset(
-        center.dx + dist * math.cos(a),
-        center.dy + dist * math.sin(a),
-      );
-      final alpha = (1 - t / 0.55) * 0.7;
-      canvas.drawCircle(p, 2.5, Paint()..color = kGreen.withOpacity(alpha));
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _ParticlesPainter old) => old.t != t;
 }
 
 // ===== TUTORIAL SHEET (Cara Pakai) =====
