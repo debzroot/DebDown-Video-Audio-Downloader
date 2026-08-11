@@ -266,7 +266,7 @@ class _HomeScreenState extends State<HomeScreen>
         _isDownloading = false;
         _downloadProgress = 1.0;
         _setStatus('[SUCCESS] Saved to: $dir');
-        _lastSavedPath = dir;
+        _lastSavedPath = dir ?? _lastSavedPath;
         _showComplete = true;
       });
       _log('SUCCESS: saved to $dir');
@@ -784,12 +784,12 @@ class _PlatformGrid extends StatelessWidget {
   const _PlatformGrid();
 
   static const _platforms = [
-    (icon: Icons.play_circle_fill, color: Color(0xFFFF0033), label: 'YouTube'),
-    (icon: Icons.music_note, color: Color(0xFF25F4EE), label: 'TikTok'),
-    (icon: Icons.camera_alt, color: Color(0xFFE1306C), label: 'Instagram'),
-    (icon: Icons.close, color: Colors.white, label: 'X / Twitter'),
-    (icon: Icons.facebook, color: Color(0xFF1877F2), label: 'Facebook'),
-    (icon: Icons.graphic_eq, color: Color(0xFFFF5500), label: 'SoundCloud'),
+    (Icons.play_circle_fill, Color(0xFFFF0033), 'YouTube'),
+    (Icons.music_note, Color(0xFF25F4EE), 'TikTok'),
+    (Icons.camera_alt, Color(0xFFE1306C), 'Instagram'),
+    (Icons.close, Colors.white, 'X / Twitter'),
+    (Icons.facebook, Color(0xFF1877F2), 'Facebook'),
+    (Icons.graphic_eq, Color(0xFFFF5500), 'SoundCloud'),
   ];
 
   @override
