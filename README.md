@@ -1,7 +1,3 @@
-<p align="center">
-  <img src="https://raw.githubusercontent.com/debzroot/debdownplus/main/assets/banner.png" alt="DebDown+" width="600"/>
-</p>
-
 <h1 align="center">⚡ DebDown+</h1>
 <p align="center"><b>Video / Audio Downloader • yt-dlp Native • Glitch Hacker Theme</b></p>
 
