@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- glow -->
+    <path
+        android:pathData="M66.7,7.2 L38.1,56.6 L51.1,56.6 L43.3,100.8 L71.9,46.2 L58.9,46.2 Z"
+        android:fillColor="#3D39FF14"
+        android:fillAlpha="1.0"/>
+    <!-- bolt -->
+    <path
+        android:pathData="M64,18 L42,56 L52,56 L46,90 L68,48 L58,48 Z"
+        android:fillColor="#39FF14"/>
+</vector>

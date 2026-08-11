@@ -70,7 +70,8 @@ class _HomeScreenState extends State<HomeScreen>
 
   bool _isDownloading = false;
   double _downloadProgress = 0.0;
-  String _statusMessage = 'SYSTEM READY [v1.3.0]';
+  String _statusMessage = 'SYSTEM READY [v1.3.1]';
+  final List<String> _statusLog = ['SYSTEM READY [v1.3.1]'];
   bool _showComplete = false;
   Timer? _completeTimer;
   String _engineStatus = 'ENGINE INIT...';
@@ -92,7 +93,7 @@ class _HomeScreenState extends State<HomeScreen>
       vsync: this,
       duration: const Duration(seconds: 2),
     )..repeat(reverse: true);
-    _log('App started v1.3.0');
+    _log('App started v1.3.1');
     _requestPermissions();
     _initEngine();
     _initShareIntent();
@@ -116,6 +117,13 @@ class _HomeScreenState extends State<HomeScreen>
     _logs.add('[$ts] $message');
     if (_logs.length > 200) _logs.removeAt(0);
     debugPrint('[DebDown+] $message');
+  }
+
+  // ===== STATUS (terminal console history) =====
+  void _setStatus(String msg) {
+    _statusMessage = msg;
+    _statusLog.add(msg);
+    if (_statusLog.length > 80) _statusLog.removeAt(0);
   }
 
   // ===== ENGINE (DebDown+ native) =====
@@ -157,19 +165,19 @@ class _HomeScreenState extends State<HomeScreen>
       final progress = (m['progress'] as num?)?.toDouble();
       if (status == 'started') {
         setState(() {
-          _statusMessage = '⚡DebDown+ downloading...';
+          _setStatus('⚡DebDown+ downloading...');
         });
         _log('Engine download started');
       } else if (status == 'done') {
         setState(() {
           _downloadProgress = 1.0;
-          _statusMessage = '⚡DebDown+ finalizing...';
+          _setStatus('⚡DebDown+ finalizing...');
         });
         _log('Engine download finished (finalizing)');
       } else if (status == 'error') {
         setState(() {
           _isDownloading = false;
-          _statusMessage = '[ERROR] ${m['error'] ?? 'download failed'}';
+          _setStatus('[ERROR] ${m['error'] ?? 'download failed'}');
         });
         _log('Engine download error: ${m['error']}');
       } else {
@@ -177,7 +185,7 @@ class _HomeScreenState extends State<HomeScreen>
         setState(() {
           if (progress != null) _downloadProgress = progress;
           if (line != null && line.isNotEmpty && line != 'null') {
-            _statusMessage = line;
+            _setStatus(line);
           }
         });
       }
@@ -201,7 +209,7 @@ class _HomeScreenState extends State<HomeScreen>
           if (text.isNotEmpty) {
             setState(() {
               _urlController.text = text;
-              _statusMessage = 'LINK INJECTED VIA SHARE-SHEET';
+              _setStatus('LINK INJECTED VIA SHARE-SHEET');
             });
             _startDownload();
           }
@@ -218,7 +226,7 @@ class _HomeScreenState extends State<HomeScreen>
         if (text.isNotEmpty) {
           setState(() {
             _urlController.text = text;
-            _statusMessage = 'LINK INJECTED VIA SHARE-SHEET';
+            _setStatus('LINK INJECTED VIA SHARE-SHEET');
           });
           WidgetsBinding.instance
               .addPostFrameCallback((_) => _startDownload());
@@ -232,7 +240,7 @@ class _HomeScreenState extends State<HomeScreen>
   Future<void> _startDownload() async {
     final url = _urlController.text.trim();
     if (url.isEmpty) {
-      setState(() => _statusMessage = '[ERROR] Please enter a valid URL!');
+      setState(() => _setStatus('[ERROR] Please enter a valid URL!'));
       _log('ERROR: empty URL');
       return;
     }
@@ -241,7 +249,7 @@ class _HomeScreenState extends State<HomeScreen>
     setState(() {
       _isDownloading = true;
       _downloadProgress = 0.0;
-      _statusMessage = '⚡DebDown+ initializing...';
+      _setStatus('⚡DebDown+ initializing...');
       _showComplete = false;
     });
     _completeTimer?.cancel();
@@ -259,7 +267,7 @@ class _HomeScreenState extends State<HomeScreen>
       setState(() {
         _isDownloading = false;
         _downloadProgress = 1.0;
-        _statusMessage = '[SUCCESS] Saved to: $dir';
+        _setStatus('[SUCCESS] Saved to: $dir');
         _showComplete = true;
       });
       _completeTimer?.cancel();
@@ -271,14 +279,14 @@ class _HomeScreenState extends State<HomeScreen>
       if (!mounted) return;
       setState(() {
         _isDownloading = false;
-        _statusMessage = '[ERROR] ${e.message ?? 'download failed'}';
+        _setStatus('[ERROR] ${e.message ?? 'download failed'}');
       });
       _log('DOWNLOAD ERROR: ${e.message}');
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _isDownloading = false;
-        _statusMessage = '[ERROR] $e';
+        _setStatus('[ERROR] $e');
       });
       _log('DOWNLOAD ERROR: $e');
     }
@@ -289,7 +297,7 @@ class _HomeScreenState extends State<HomeScreen>
       await _ytdl.invokeMethod('cancel');
       setState(() {
         _isDownloading = false;
-        _statusMessage = '[ABORTED] Download cancelled';
+        _setStatus('[ABORTED] Download cancelled');
       });
       _log('Download cancelled by user');
     } catch (e) {
@@ -300,10 +308,9 @@ class _HomeScreenState extends State<HomeScreen>
   // ===== TUTORIAL POPUP =====
   void _showTutorial() {
     _log('Tutorial opened');
-    showModalBottomSheet(
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+      barrierColor: Colors.black.withOpacity(0.65),
       builder: (_) => const TutorialSheet(),
     );
   }
@@ -399,7 +406,7 @@ class _HomeScreenState extends State<HomeScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const GlitchText(
-                  text: '// ⚡DEBDOWN+ ENGINE v1.3.0',
+                  text: '// ⚡DEBDOWN+ ENGINE v1.3.1',
                   style: TextStyle(
                     color: kPurple,
                     fontWeight: FontWeight.bold,
@@ -484,11 +491,10 @@ class _HomeScreenState extends State<HomeScreen>
             const SizedBox(height: 16),
           ],
 
-          // Status console (terminal)
+          // Status console (terminal) - fixed height, syntax highlight
           _TerminalConsole(
-            message: _statusMessage,
+            statusLog: _statusLog,
             cursorCtrl: _cursorCtrl,
-            isError: _statusMessage.startsWith('[ERROR]'),
           ),
             ],
           ),
@@ -507,7 +513,7 @@ class _HomeScreenState extends State<HomeScreen>
         children: [
           const SizedBox(height: 30),
           const GlitchText(
-            text: '[DEV] & DONATION PANEL',
+            text: '🚀 DEVELOPER',
             style: TextStyle(
               color: kPurple,
               fontSize: 18,
@@ -546,7 +552,7 @@ class _HomeScreenState extends State<HomeScreen>
           ),
           const SizedBox(height: 12),
           const Text(
-            'debzroot (Developer)',
+            '✨ Debz ✨',
             style: TextStyle(
               color: kGreen,
               fontWeight: FontWeight.bold,
@@ -556,9 +562,18 @@ class _HomeScreenState extends State<HomeScreen>
           const SizedBox(height: 28),
 
           // QR DANA
-          const Text(
-            'Traktir Kopi / Support Development',
-            style: TextStyle(color: Colors.white, fontSize: 13),
+          const GlitchText(
+            text: '☕ TRAKTIR KOPI 😁',
+            intensity: 1.2,
+            style: TextStyle(
+              color: kOrange,
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1.5,
+              shadows: [
+                Shadow(color: Color(0x66FF8C00), blurRadius: 8),
+              ],
+            ),
           ),
           const SizedBox(height: 12),
           GestureDetector(
@@ -638,12 +653,12 @@ class _HomeScreenState extends State<HomeScreen>
                           itemCount: _logs.length,
                           itemBuilder: (context, index) {
                             final log = _logs[_logs.length - 1 - index];
-                            final isError = log.contains('ERROR');
-                            return Text(
-                              log,
-                              style: TextStyle(
-                                color: isError ? kRed : kGreen,
-                                fontSize: 10,
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 1),
+                              child: RichText(
+                                text: TextSpan(
+                                  children: _highlightTerminal(log),
+                                ),
                               ),
                             );
                           },
@@ -676,7 +691,7 @@ class _HomeScreenState extends State<HomeScreen>
     try {
       final dir = await getTemporaryDirectory();
       final file = File('${dir.path}/debdown_logs.txt');
-      final header = 'DEBDOWN+ v1.3.0 - SYSTEM LOGS\n'
+      final header = 'DEBDOWN+ v1.3.1 - SYSTEM LOGS\n'
           'Generated: ${DateTime.now()}\n'
           'Device: ${Platform.operatingSystem} ${Platform.operatingSystemVersion}\n'
           '${'=' * 40}\n\n';
@@ -689,7 +704,7 @@ class _HomeScreenState extends State<HomeScreen>
       });
     } catch (e) {
       _log('SHARE LOGS ERROR: $e');
-      setState(() => _statusMessage = '[ERROR] Failed to share logs: $e');
+      setState(() => _setStatus('[ERROR] Failed to share logs: $e'));
     }
   }
 }
@@ -936,100 +951,213 @@ class _GlassButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final active = onTap != null;
-    return GestureDetector(
-      onTap: active ? onTap : null,
-      child: GlassPanel(
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        borderColor: active ? color : Colors.grey.shade800,
-        glowColor: active ? color.withOpacity(0.25) : Colors.transparent,
-        radius: 12,
-        blur: 8,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              icon,
-              color: active ? color : Colors.grey.shade600,
-              size: 18,
-            ),
-            const SizedBox(width: 10),
-            Text(
-              label,
-              style: TextStyle(
+    return Center(
+      child: GestureDetector(
+        onTap: active ? onTap : null,
+        child: GlassPanel(
+          padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 12),
+          borderColor: active ? color : Colors.grey.shade800,
+          glowColor: active ? color.withOpacity(0.25) : Colors.transparent,
+          radius: 12,
+          blur: 8,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
                 color: active ? color : Colors.grey.shade600,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 1.5,
-                fontSize: 14,
-                shadows: active
-                    ? [Shadow(color: color.withOpacity(0.6), blurRadius: 8)]
-                    : null,
+                size: 18,
               ),
-            ),
-          ],
+              const SizedBox(width: 10),
+              Text(
+                label,
+                style: TextStyle(
+                  color: active ? color : Colors.grey.shade600,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.5,
+                  fontSize: 14,
+                  shadows: active
+                      ? [Shadow(color: color.withOpacity(0.6), blurRadius: 8)]
+                      : null,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-// ===== TERMINAL CONSOLE =====
+// ===== TERMINAL CONSOLE (fixed-height, syntax highlight) =====
 class _TerminalConsole extends StatelessWidget {
-  final String message;
+  final List<String> statusLog;
   final AnimationController cursorCtrl;
-  final bool isError;
 
   const _TerminalConsole({
-    required this.message,
+    required this.statusLog,
     required this.cursorCtrl,
-    required this.isError,
   });
 
   @override
   Widget build(BuildContext context) {
     return GlassPanel(
       padding: const EdgeInsets.all(12),
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            '❯',
-            style: TextStyle(
-              color: kCyan,
-              fontWeight: FontWeight.bold,
-              shadows: [Shadow(color: Color(0x6600FFFF), blurRadius: 6)],
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              message,
-              style: TextStyle(
-                color: isError ? kRed : kGreen,
-                fontSize: 12,
-                height: 1.4,
-                shadows: [
-                  Shadow(
-                    color: (isError ? kRed : kGreen).withOpacity(0.4),
-                    blurRadius: 6,
-                  ),
-                ],
+          Row(
+            children: [
+              const GlitchText(
+                text: '// TERMINAL',
+                style: TextStyle(
+                  color: kPurple,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.5,
+                  fontSize: 12,
+                ),
               ),
-            ),
+              const Spacer(),
+              Text(
+                'LIVE',
+                style: TextStyle(
+                  color: kGreen,
+                  fontSize: 9,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.5,
+                  shadows: [
+                    Shadow(color: kGreen.withOpacity(0.6), blurRadius: 6),
+                  ],
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 6),
-          // blinking cursor
-          FadeTransition(
-            opacity: Tween(begin: 1.0, end: 0.0).animate(cursorCtrl),
-            child: Container(
-              width: 8,
-              height: 14,
-              color: kGreen,
+          const SizedBox(height: 8),
+          // Fixed-height terminal window (selalu penuh, ga ngegantung)
+          Container(
+            height: 150,
+            width: double.infinity,
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.55),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.grey.shade800),
+            ),
+            child: ListView.builder(
+              reverse: true,
+              itemCount: statusLog.length,
+              itemBuilder: (context, index) {
+                final line = statusLog[statusLog.length - 1 - index];
+                final isNewest = index == 0;
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (isNewest)
+                      const Padding(
+                        padding: EdgeInsets.only(top: 1, right: 4),
+                        child: Text(
+                          '❯',
+                          style: TextStyle(
+                            color: kCyan,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 10,
+                            shadows: [
+                              Shadow(
+                                color: Color(0x6600FFFF),
+                                blurRadius: 4,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    Expanded(
+                      child: RichText(
+                        text: TextSpan(
+                          children: _highlightTerminal(line),
+                        ),
+                      ),
+                    ),
+                    if (isNewest)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 3, top: 1),
+                        child: FadeTransition(
+                          opacity: Tween(begin: 1.0, end: 0.0)
+                              .animate(cursorCtrl),
+                          child: Container(
+                            width: 7,
+                            height: 12,
+                            color: kGreen,
+                          ),
+                        ),
+                      ),
+                  ],
+                );
+              },
             ),
           ),
         ],
       ),
     );
   }
+}
+
+// ===== SYNTAX HIGHLIGHT (terminal + logs) =====
+List<TextSpan> _highlightTerminal(String text, {double size = 10}) {
+  final spans = <TextSpan>[];
+  final re = RegExp(
+    r'(\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\])' // timestamp
+    r'|(\[(?:ERROR|NETWORK ERROR|SHARE LOGS ERROR|DOWNLOAD ERROR|FAILED|MISMATCH)[^\]]*\])' // error
+    r'|(\[(?:SUCCESS|OK)[^\]]*\])' // success
+    r'|(\[(?:INFO|ABORTED|WARNING|WARN|ENGINE)[^\]]*\])' // info/warn
+    r'|(\d+(?:\.\d+)?%)' // percent
+    r'|(https?://[^\s\]]+)' // url
+    r'|(⚡DebDown\+[^\s]*)', // engine brand
+  );
+  var last = 0;
+  for (final m in re.allMatches(text)) {
+    if (m.start > last) {
+      spans.add(TextSpan(
+        text: text.substring(last, m.start),
+        style: TextStyle(color: kGreen, fontSize: size),
+      ));
+    }
+    final tok = m.group(0)!;
+    Color c;
+    bool bold = false;
+    if (m.group(1) != null) {
+      c = Colors.grey.shade600;
+    } else if (m.group(2) != null) {
+      c = kRed;
+      bold = true;
+    } else if (m.group(3) != null) {
+      c = kGreen;
+      bold = true;
+    } else if (m.group(4) != null) {
+      c = kYellow;
+    } else if (m.group(5) != null) {
+      c = kYellow;
+    } else if (m.group(6) != null) {
+      c = kCyan;
+    } else {
+      c = kCyan;
+    }
+    spans.add(TextSpan(
+      text: tok,
+      style: TextStyle(
+        color: c,
+        fontSize: size,
+        fontWeight: bold ? FontWeight.bold : null,
+      ),
+    ));
+    last = m.end;
+  }
+  if (last < text.length) {
+    spans.add(TextSpan(
+      text: text.substring(last),
+      style: TextStyle(color: kGreen, fontSize: size),
+    ));
+  }
+  return spans;
 }
 
 // ===== BACKGROUND: grid + glow (port .parallax from base.css) =====
@@ -1619,162 +1747,183 @@ class _TutorialSheetState extends State<TutorialSheet>
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => Navigator.pop(context),
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      insetPadding: const EdgeInsets.all(28),
       child: Container(
-        color: Colors.black.withOpacity(0.55),
-        child: Align(
-          alignment: Alignment.bottomCenter,
-          child: GestureDetector(
-            onTap: () {},
+        // BORDER di container LUAR (tidak ke-clip) biar semua sisi kelihatan
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: kGreen.withOpacity(0.65), width: 1.4),
+          boxShadow: [
+            BoxShadow(
+              color: kGreen.withOpacity(0.3),
+              blurRadius: 44,
+              spreadRadius: 2,
+            ),
+            BoxShadow(
+              color: Colors.black.withOpacity(0.8),
+              blurRadius: 30,
+              offset: const Offset(0, 18),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(21),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
             child: Container(
               constraints: BoxConstraints(
-                maxHeight: MediaQuery.of(context).size.height * 0.78,
+                maxHeight: MediaQuery.of(context).size.height * 0.72,
               ),
-              width: double.infinity,
-              margin: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: kGreen.withOpacity(0.25),
-                    blurRadius: 40,
-                    spreadRadius: 2,
-                  ),
-                ],
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xF2161F16), Color(0xF2050505)],
+                ),
               ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(20),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [Color(0x330A1A0A), Color(0xE6050505)],
-                      ),
-                      border: Border.all(color: kGreen.withOpacity(0.5)),
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // drag handle
-                        Container(
-                          width: 42,
-                          height: 4,
-                          margin: const EdgeInsets.only(top: 10),
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade700,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-                        const GlitchText(
-                          text: '⚡ CARA PAKAI DEBDOWN+',
-                          intensity: 1.3,
-                          style: TextStyle(
-                            fontFamily: kMono,
-                            color: kGreen,
-                            fontSize: 19,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 2,
-                            shadows: [
-                              Shadow(
-                                color: Color(0x6639FF14),
-                                blurRadius: 12,
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Gampang banget, 2 cara aja 👇',
-                          style: TextStyle(
-                            fontFamily: kMono,
-                            color: Colors.grey.shade400,
-                            fontSize: 12,
-                            letterSpacing: 1,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Flexible(
-                          child: SingleChildScrollView(
-                            padding: const EdgeInsets.symmetric(horizontal: 14),
-                            child: Column(
-                              children: [
-                                _TutorialStep(
-                                  anim: _ctrl,
-                                  index: 0,
-                                  icon: Icons.copy,
-                                  color: kYellow,
-                                  title: 'CARA 1 • COPY & PASTE',
-                                  lines: [
-                                    'Buka app TikTok / IG / YT, ketuk ikon SHARE '
-                                        'di video yang mau diambil',
-                                    'Pilih COPY LINK, atau langsung "Copy" dari '
-                                        'kolom share',
-                                    'Buka ⚡DebDown+ → tempel (paste) link di '
-                                        'kolom di atas 👆',
-                                  ],
-                                ),
-                                _TutorialStep(
-                                  anim: _ctrl,
-                                  index: 1,
-                                  icon: Icons.ios_share,
-                                  color: kGreen,
-                                  title: 'CARA 2 • SHARE LANGSUNG',
-                                  lines: [
-                                    'Di app video, ketuk SHARE',
-                                    'Pilih ⚡DebDown+ di daftar share sheet',
-                                    'Auto! Link langsung masuk & download jalan '
-                                        'sendiri 🚀',
-                                  ],
-                                ),
-                                _TutorialStep(
-                                  anim: _ctrl,
-                                  index: 2,
-                                  icon: Icons.tune,
-                                  color: kPurple,
-                                  title: 'PILIH FORMAT',
-                                  lines: [
-                                    'MP4 = video + suara (paling umum)',
-                                    'MP3 = audio aja, buat dengerin doang 🎧',
-                                    'Bisa ganti-ganti kapan aja sebelum download',
-                                  ],
-                                ),
-                                _TutorialStep(
-                                  anim: _ctrl,
-                                  index: 3,
-                                  icon: Icons.download_done,
-                                  color: kCyan,
-                                  title: 'TEKAN START DOWNLOAD 🔥',
-                                  lines: [
-                                    'Tunggu progress sampai 100%',
-                                    'File otomatis masuk folder '
-                                        'Download/DebDown+',
-                                    'Support YouTube, TikTok, IG, X, FB, '
-                                        'SoundCloud & 1000+ situs!',
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 14),
-                          child: _GlassButton(
-                            label: 'SIAP, GAS!',
-                            icon: Icons.bolt,
-                            color: kGreen,
-                            onTap: () => Navigator.pop(context),
-                          ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(height: 20),
+                  const GlitchText(
+                    text: '⚡ CARA PAKAI DEBDOWN+',
+                    intensity: 1.3,
+                    style: TextStyle(
+                      fontFamily: kMono,
+                      color: kGreen,
+                      fontSize: 19,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 2,
+                      shadows: [
+                        Shadow(
+                          color: Color(0x6639FF14),
+                          blurRadius: 12,
                         ),
                       ],
                     ),
                   ),
-                ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Gampang banget, 2 cara aja 👇',
+                    style: TextStyle(
+                      fontFamily: kMono,
+                      color: Colors.grey.shade400,
+                      fontSize: 12,
+                      letterSpacing: 1,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Flexible(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      child: Column(
+                        children: [
+                          _TutorialStep(
+                            anim: _ctrl,
+                            index: 0,
+                            icon: Icons.copy,
+                            color: kYellow,
+                            title: 'CARA 1 • COPY & PASTE',
+                            lines: [
+                              'Buka app TikTok / IG / YT, ketuk ikon SHARE '
+                                  'di video yang mau diambil',
+                              'Pilih COPY LINK, atau langsung "Copy" dari '
+                                  'kolom share',
+                              'Buka ⚡DebDown+ → tempel (paste) link di '
+                                  'kolom di atas 👆',
+                            ],
+                          ),
+                          _TutorialStep(
+                            anim: _ctrl,
+                            index: 1,
+                            icon: Icons.ios_share,
+                            color: kGreen,
+                            title: 'CARA 2 • SHARE LANGSUNG',
+                            lines: [
+                              'Di app video, ketuk SHARE',
+                              'Pilih ⚡DebDown+ di daftar share sheet',
+                              'Auto! Link langsung masuk & download jalan '
+                                  'sendiri 🚀',
+                            ],
+                          ),
+                          _TutorialStep(
+                            anim: _ctrl,
+                            index: 2,
+                            icon: Icons.tune,
+                            color: kPurple,
+                            title: 'PILIH FORMAT',
+                            lines: [
+                              'MP4 = video + suara (paling umum)',
+                              'MP3 = audio aja, buat dengerin doang 🎧',
+                              'Bisa ganti-ganti kapan aja sebelum download',
+                            ],
+                          ),
+                          _TutorialStep(
+                            anim: _ctrl,
+                            index: 3,
+                            icon: Icons.download_done,
+                            color: kCyan,
+                            title: 'TEKAN START DOWNLOAD 🔥',
+                            lines: [
+                              'Tunggu progress sampai 100%',
+                              'File otomatis masuk folder Download/DebDown+',
+                              'Support YouTube, TikTok, IG, X, FB, '
+                                  'SoundCloud & 1000+ situs!',
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  // Tombol compact (sesuai panjang teks)
+                  GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 18),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 22,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(10),
+                        gradient: LinearGradient(
+                          colors: [
+                            kGreen.withOpacity(0.16),
+                            Colors.black.withOpacity(0.35),
+                          ],
+                        ),
+                        border: Border.all(color: kGreen, width: 1.2),
+                        boxShadow: [
+                          BoxShadow(
+                            color: kGreen.withOpacity(0.35),
+                            blurRadius: 14,
+                          ),
+                        ],
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.bolt, color: kGreen, size: 16),
+                          SizedBox(width: 7),
+                          Text(
+                            'SIAP, GAS!',
+                            style: TextStyle(
+                              fontFamily: kMono,
+                              color: kGreen,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 1.2,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
