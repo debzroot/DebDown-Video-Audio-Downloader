@@ -62,6 +62,15 @@ jobs:
       - name: Build APK Release (split per ABI)
         run: flutter build apk --release --split-per-abi
 
+      - name: Sign APKs
+        uses: r0adkll/sign-android-release@v1
+        with:
+          releaseDirectory: build/app/outputs/flutter-apk
+          signingKeyBase64: ${{ secrets.SIGNING_KEY }}
+          alias: ${{ secrets.ALIAS }}
+          keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
+          keyPassword: ${{ secrets.KEY_PASSWORD }}
+
       - name: Upload APK Artifacts
         uses: actions/upload-artifact@v4
         with:
