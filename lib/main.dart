@@ -72,14 +72,14 @@ class _HomeScreenState extends State<HomeScreen>
 
   bool _isDownloading = false;
   double _downloadProgress = 0.0;
-  String _statusMessage = 'SYSTEM READY [v1.3.5]';
-  final List<String> _statusLog = ['SYSTEM READY [v1.3.5]'];
+  String _statusMessage = '___SYSTEM READY';
+  final List<String> _statusLog = ['___SYSTEM READY'];
   bool _showComplete = false;
   String _lastSavedPath = 'Download/DebDown+';
   String _engineStatus = 'ENGINE INIT...';
   final List<String> _logs = [];
   late final AnimationController _cursorCtrl;
-  late final AnimationController _glowCtrl; // BUAT KEDIP FOTO (efek.txt)
+  late final AnimationController _glowCtrl;
 
   StreamSubscription<dynamic>? _shareSub;
   StreamSubscription<dynamic>? _ytdlSub;
@@ -104,7 +104,7 @@ class _HomeScreenState extends State<HomeScreen>
     _requestPermissions();
     _initEngine();
     _initShareIntent();
-    _checkAppUpdate(); // Auto-check update on start
+    _checkAppUpdate();
     _ytdlSub = _ytdlEvents.receiveBroadcastStream().listen(_onEngineEvent);
   }
 
@@ -670,9 +670,9 @@ class _HomeScreenState extends State<HomeScreen>
               ),
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 5),
           const Text(
-            'Tap image to Zoom QR DANA',
+            'Zoom QR DANA',
             style: TextStyle(color: Colors.grey, fontSize: 10),
           ),
           const SizedBox(height: 14),
@@ -739,14 +739,14 @@ class _HomeScreenState extends State<HomeScreen>
 
           // SHARE LOGS
           _GlassButton(
-            label: 'SHARE LOGS.TXT',
+            label: 'SHARE LOGS',
             icon: Icons.ios_share,
             color: kGreen,
             onTap: _shareLogs,
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 5),
           const Text(
-            'Kirim file log ke developer untuk analisa error',
+            'Kirim file log ke developer',
             style: TextStyle(color: Colors.grey, fontSize: 10),
           ),
         ],
