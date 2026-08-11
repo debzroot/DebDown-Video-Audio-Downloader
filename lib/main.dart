@@ -129,8 +129,8 @@ class _HomeScreenState extends State<HomeScreen>
   Future<void> _initEngine() async {
     try {
       final v = await _ytdl.invokeMethod<String>('init');
-      setState(() => _engineStatus = 'ENGINE v$v');
-      _log('Engine initialized: v$v');
+      setState(() => _engineStatus = 'ENGINE DONE');
+      _log('Engine initialized: DONE');
       // Auto-update engine from GitHub (fire & forget)
       _ytdl.invokeMethod('update').then((res) {
         _log('Auto-update result: $res');
@@ -149,10 +149,9 @@ class _HomeScreenState extends State<HomeScreen>
     final type = m['type'];
     if (type == 'update') {
       final status = m['status'] ?? '';
-      final version = m['version'] ?? '';
       if (status.contains('DONE') || status.contains('UP_TO_DATE')) {
-        setState(() => _engineStatus = 'ENGINE v$version');
-        _log('Engine update: $status (v$version)');
+        setState(() => _engineStatus = 'ENGINE DONE');
+        _log('Engine update: DONE');
       } else {
         _log('Engine update status: $status');
       }
@@ -476,11 +475,17 @@ class _HomeScreenState extends State<HomeScreen>
 
   // ===== DEV TAB =====
   Widget _buildDevTab() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: IntrinsicHeight(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
           const GlitchText(
             text: '🚀 DEVELOPER',
             style: TextStyle(
@@ -652,7 +657,11 @@ class _HomeScreenState extends State<HomeScreen>
           ),
         ],
       ),
-    );
+    ),
+  ),
+);
+  },
+);
   }
 
   Future<void> _shareLogs() async {

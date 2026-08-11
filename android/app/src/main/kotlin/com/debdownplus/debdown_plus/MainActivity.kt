@@ -40,7 +40,7 @@ class MainActivity : FlutterActivity() {
                         try {
                             initEngines()
                             val version = YoutubeDL.getInstance().versionName(applicationContext)
-                            runOnUiThread { result.success(version) }
+                            runOnUiThread { result.success("DONE") }
                         } catch (e: Exception) {
                             runOnUiThread { result.error("INIT", e.message ?: "init failed", null) }
                         }
@@ -54,12 +54,11 @@ class MainActivity : FlutterActivity() {
                             initEngines()
                             val status = YoutubeDL.getInstance()
                                 .updateYoutubeDL(applicationContext, YoutubeDL.UpdateChannel._STABLE)
-                            val version = YoutubeDL.getInstance().versionName(applicationContext)
                             runOnUiThread {
                                 progressSink?.success(
-                                    mapOf("type" to "update", "status" to status.toString(), "version" to version)
+                                    mapOf("type" to "update", "status" to status.toString())
                                 )
-                                result.success("$status|$version")
+                                result.success("DONE")
                             }
                         } catch (e: Exception) {
                             runOnUiThread {
