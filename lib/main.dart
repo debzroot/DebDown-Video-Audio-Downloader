@@ -15,11 +15,13 @@ const kGreenDim = Color(0x8039FF14);
 const kPurple = Color(0xFFAF82FF);
 const kRed = Color(0xFFFF5F56);
 const kYellow = Color(0xFFFFBD2E);
+const kOrange = Color(0xFFFF8C00);
 const kCyan = Color(0xFF00FFFF);
 const kBg = Color(0xFF050505);
 const kGrid = Color(0x4D145014); // rgba(20,80,20,0.3)
 const kGlassBorder = Color(0x8039FF14);
-const kMono = 'monospace';
+const kMono = 'Saira'; // UI font (port dari base.css: font-family Saira)
+const kMonoTerminal = 'monospace'; // khusus terminal console / logs
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -58,21 +60,23 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   static const _ytdl = MethodChannel('debdown/ytdl');
   static const _ytdlEvents = EventChannel('debdown/ytdl/progress');
 
   int _currentIndex = 0;
   final TextEditingController _urlController = TextEditingController();
-  final TextEditingController _fileNameController = TextEditingController();
   String _selectedFormat = 'mp4';
 
   bool _isDownloading = false;
   double _downloadProgress = 0.0;
-  String _statusMessage = 'SYSTEM READY [v1.2.0]';
+  String _statusMessage = 'SYSTEM READY [v1.3.0]';
+  bool _showComplete = false;
+  Timer? _completeTimer;
   String _engineStatus = 'ENGINE INIT...';
   final List<String> _logs = [];
   late final AnimationController _cursorCtrl;
+  late final AnimationController _glowCtrl; // BUAT KEDIP FOTO (efek.txt)
 
   StreamSubscription<dynamic>? _shareSub;
   StreamSubscription<dynamic>? _ytdlSub;
@@ -84,7 +88,11 @@ class _HomeScreenState extends State<HomeScreen>
       vsync: this,
       duration: const Duration(milliseconds: 900),
     )..repeat();
-    _log('App started v1.2.0');
+    _glowCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat(reverse: true);
+    _log('App started v1.3.0');
     _requestPermissions();
     _initEngine();
     _initShareIntent();
@@ -93,11 +101,12 @@ class _HomeScreenState extends State<HomeScreen>
 
   @override
   void dispose() {
+    _completeTimer?.cancel();
     _shareSub?.cancel();
     _ytdlSub?.cancel();
     _cursorCtrl.dispose();
+    _glowCtrl.dispose();
     _urlController.dispose();
-    _fileNameController.dispose();
     super.dispose();
   }
 
@@ -109,7 +118,7 @@ class _HomeScreenState extends State<HomeScreen>
     debugPrint('[DebDown+] $message');
   }
 
-  // ===== ENGINE (yt-dlp native) =====
+  // ===== ENGINE (DebDown+ native) =====
   Future<void> _initEngine() async {
     try {
       final v = await _ytdl.invokeMethod<String>('init');
@@ -148,13 +157,13 @@ class _HomeScreenState extends State<HomeScreen>
       final progress = (m['progress'] as num?)?.toDouble();
       if (status == 'started') {
         setState(() {
-          _statusMessage = '[ENGINE] yt-dlp started...';
+          _statusMessage = '⚡DebDown+ downloading...';
         });
         _log('Engine download started');
       } else if (status == 'done') {
         setState(() {
           _downloadProgress = 1.0;
-          _statusMessage = '[ENGINE] finalizing...';
+          _statusMessage = '⚡DebDown+ finalizing...';
         });
         _log('Engine download finished (finalizing)');
       } else if (status == 'error') {
@@ -232,17 +241,18 @@ class _HomeScreenState extends State<HomeScreen>
     setState(() {
       _isDownloading = true;
       _downloadProgress = 0.0;
-      _statusMessage = '[ENGINE] initializing yt-dlp...';
+      _statusMessage = '⚡DebDown+ initializing...';
+      _showComplete = false;
     });
+    _completeTimer?.cancel();
 
     try {
       final dir = await _ytdl.invokeMethod<String>('defaultDir');
-      final name = _fileNameController.text.trim();
       _log('Target dir: $dir');
       await _ytdl.invokeMethod('download', {
         'url': url,
         'dir': dir,
-        'name': name,
+        'name': '',
         'format': _selectedFormat,
       });
       if (!mounted) return;
@@ -250,6 +260,11 @@ class _HomeScreenState extends State<HomeScreen>
         _isDownloading = false;
         _downloadProgress = 1.0;
         _statusMessage = '[SUCCESS] Saved to: $dir';
+        _showComplete = true;
+      });
+      _completeTimer?.cancel();
+      _completeTimer = Timer(const Duration(milliseconds: 2600), () {
+        if (mounted) setState(() => _showComplete = false);
       });
       _log('SUCCESS: saved to $dir');
     } on PlatformException catch (e) {
@@ -282,6 +297,17 @@ class _HomeScreenState extends State<HomeScreen>
     }
   }
 
+  // ===== TUTORIAL POPUP =====
+  void _showTutorial() {
+    _log('Tutorial opened');
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const TutorialSheet(),
+    );
+  }
+
   // ===== UI =====
   @override
   Widget build(BuildContext context) {
@@ -303,21 +329,6 @@ class _HomeScreenState extends State<HomeScreen>
             ],
           ),
         ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 14),
-            child: Center(
-              child: Text(
-                _engineStatus,
-                style: const TextStyle(
-                  fontSize: 9,
-                  color: kPurple,
-                  shadows: [Shadow(color: Color(0x66AF82FF), blurRadius: 6)],
-                ),
-              ),
-            ),
-          ),
-        ],
       ),
       body: Stack(
         children: [
@@ -373,11 +384,13 @@ class _HomeScreenState extends State<HomeScreen>
 
   // ===== DOWNLOADER TAB =====
   Widget _buildDownloaderTab() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
+    return Stack(
+      children: [
+        SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
           const SizedBox(height: 30),
           // Glitch banner
           GlassPanel(
@@ -386,7 +399,7 @@ class _HomeScreenState extends State<HomeScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const GlitchText(
-                  text: '// YT-DLP ENGINE v1.2.0',
+                  text: '// ⚡DEBDOWN+ ENGINE v1.3.0',
                   style: TextStyle(
                     color: kPurple,
                     fontWeight: FontWeight.bold,
@@ -405,6 +418,15 @@ class _HomeScreenState extends State<HomeScreen>
                 ),
               ],
             ),
+          ),
+          const SizedBox(height: 16),
+
+          // CARA PAKAI button
+          _GlassButton(
+            label: '⚡ CARA PAKAI',
+            icon: Icons.help_outline,
+            color: kCyan,
+            onTap: _showTutorial,
           ),
           const SizedBox(height: 16),
 
@@ -434,14 +456,6 @@ class _HomeScreenState extends State<HomeScreen>
           ),
           const SizedBox(height: 12),
 
-          // Filename
-          _GlassField(
-            controller: _fileNameController,
-            label: 'Custom Filename (Optional)',
-            icon: Icons.edit,
-          ),
-          const SizedBox(height: 16),
-
           // Download button
           _GlassButton(
             label: _isDownloading ? 'DOWNLOADING...' : 'START DOWNLOAD',
@@ -460,16 +474,12 @@ class _HomeScreenState extends State<HomeScreen>
           ],
           const SizedBox(height: 16),
 
-          // Progress
+          // Hacker progress panel
           if (_isDownloading) ...[
-            ClipRRect(
-              borderRadius: BorderRadius.circular(6),
-              child: LinearProgressIndicator(
-                value: _downloadProgress,
-                minHeight: 10,
-                backgroundColor: Colors.black54,
-                color: kGreen,
-              ),
+            HackerDownloadPanel(
+              progress: _downloadProgress,
+              statusLine: _statusMessage,
+              isError: _statusMessage.startsWith('[ERROR]'),
             ),
             const SizedBox(height: 16),
           ],
@@ -480,8 +490,11 @@ class _HomeScreenState extends State<HomeScreen>
             cursorCtrl: _cursorCtrl,
             isError: _statusMessage.startsWith('[ERROR]'),
           ),
-        ],
-      ),
+            ],
+          ),
+        ),
+        if (_showComplete) const DownloadCompleteOverlay(),
+      ],
     );
   }
 
@@ -663,7 +676,7 @@ class _HomeScreenState extends State<HomeScreen>
     try {
       final dir = await getTemporaryDirectory();
       final file = File('${dir.path}/debdown_logs.txt');
-      final header = 'DEBDOWN+ v1.2.0 - SYSTEM LOGS\n'
+      final header = 'DEBDOWN+ v1.3.0 - SYSTEM LOGS\n'
           'Generated: ${DateTime.now()}\n'
           'Device: ${Platform.operatingSystem} ${Platform.operatingSystemVersion}\n'
           '${'=' * 40}\n\n';
@@ -1113,6 +1126,775 @@ class ScanlinesPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+// ===== HACKER DOWNLOAD PANEL (loading effect) =====
+class HackerDownloadPanel extends StatefulWidget {
+  final double progress;
+  final String statusLine;
+  final bool isError;
+
+  const HackerDownloadPanel({
+    super.key,
+    required this.progress,
+    required this.statusLine,
+    this.isError = false,
+  });
+
+  @override
+  State<HackerDownloadPanel> createState() => _HackerDownloadPanelState();
+}
+
+class _HackerDownloadPanelState extends State<HackerDownloadPanel>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _sweep;
+  late final AnimationController _bars;
+
+  @override
+  void initState() {
+    super.initState();
+    _sweep = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 3),
+    )..repeat();
+    _bars = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 700),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _sweep.dispose();
+    _bars.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final color = widget.isError ? kRed : kGreen;
+    final pct = (widget.progress.clamp(0.0, 1.0) * 100).round();
+    return GlassPanel(
+      borderColor: color,
+      glowColor: color.withOpacity(0.25),
+      padding: const EdgeInsets.all(16),
+      child: Stack(
+        children: [
+          const Positioned.fill(child: _CornerBrackets()),
+          Row(
+            children: [
+              // Progress ring
+              SizedBox(
+                width: 92,
+                height: 92,
+                child: AnimatedBuilder(
+                  animation: _sweep,
+                  builder: (_, __) => CustomPaint(
+                    painter: _ProgressRingPainter(
+                      progress: widget.progress,
+                      sweep: _sweep.value,
+                      isError: widget.isError,
+                    ),
+                    child: Center(
+                      child: Text(
+                        '$pct%',
+                        style: TextStyle(
+                          fontFamily: kMono,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                          color: color,
+                          shadows: [
+                            Shadow(color: color.withOpacity(0.7), blurRadius: 10),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              // Right column
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.bolt, color: kYellow, size: 14),
+                        const SizedBox(width: 6),
+                        Text(
+                          widget.isError
+                              ? 'DOWNLOAD FAILED'
+                              : 'DOWNLOADING',
+                          style: TextStyle(
+                            fontFamily: kMono,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 2,
+                            color: color,
+                            shadows: [
+                              Shadow(color: color.withOpacity(0.5), blurRadius: 6),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    _EqualizerBars(ctrl: _bars, color: color),
+                    const SizedBox(height: 10),
+                    // Live status line
+                    Text(
+                      widget.statusLine,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontFamily: kMonoTerminal,
+                        fontSize: 9,
+                        color: Colors.grey.shade400,
+                        height: 1.3,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProgressRingPainter extends CustomPainter {
+  final double progress;
+  final double sweep; // 0..1 rotating
+  final bool isError;
+
+  _ProgressRingPainter({
+    required this.progress,
+    required this.sweep,
+    required this.isError,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2 - 6;
+    final rect = Rect.fromCircle(center: center, radius: radius);
+    final color = isError ? kRed : kGreen;
+    final p = progress.clamp(0.0, 1.0);
+
+    // track
+    canvas.drawCircle(
+      center,
+      radius,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 5
+        ..color = Colors.black.withOpacity(0.6),
+    );
+
+    // glow underlay
+    canvas.drawArc(
+      rect,
+      -math.pi / 2,
+      p * 2 * math.pi,
+      false,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 9
+        ..color = color.withOpacity(0.25)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6),
+    );
+
+    // progress arc with animated gradient
+    canvas.drawArc(
+      rect,
+      -math.pi / 2,
+      p * 2 * math.pi,
+      false,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 5
+        ..strokeCap = StrokeCap.round
+        ..shader = SweepGradient(
+          colors: [
+            color.withOpacity(0.3),
+            color,
+            Colors.white,
+            color,
+            color.withOpacity(0.3),
+          ],
+          transform: GradientRotation(sweep * 2 * math.pi),
+        ).createShader(rect),
+    );
+
+    // rotating tick marks
+    final tickPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5
+      ..color = color.withOpacity(0.35);
+    for (var i = 0; i < 12; i++) {
+      final a = sweep * 2 * math.pi + i * (2 * math.pi / 12);
+      final r1 = radius - 8;
+      final r2 = radius - 5;
+      canvas.drawLine(
+        Offset(center.dx + r1 * math.cos(a), center.dy + r1 * math.sin(a)),
+        Offset(center.dx + r2 * math.cos(a), center.dy + r2 * math.sin(a)),
+        tickPaint,
+      );
+    }
+
+    // head dot
+    final headAngle = -math.pi / 2 + p * 2 * math.pi;
+    final head = Offset(
+      center.dx + radius * math.cos(headAngle),
+      center.dy + radius * math.sin(headAngle),
+    );
+    canvas.drawCircle(head, 8, Paint()
+      ..color = color.withOpacity(0.3)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4));
+    canvas.drawCircle(head, 4, Paint()..color = Colors.white);
+  }
+
+  @override
+  bool shouldRepaint(covariant _ProgressRingPainter old) =>
+      old.progress != progress || old.sweep != sweep || old.isError != isError;
+}
+
+class _EqualizerBars extends StatelessWidget {
+  final Animation<double> ctrl;
+  final Color color;
+
+  const _EqualizerBars({required this.ctrl, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    const bars = 6;
+    return AnimatedBuilder(
+      animation: ctrl,
+      builder: (_, __) {
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: List.generate(bars, (i) {
+            final phase = i * 0.9;
+            final h = 6 +
+                14 *
+                    (0.5 +
+                        0.5 *
+                            math.sin(
+                                ctrl.value * 2 * math.pi * 2 + phase));
+            return Container(
+              width: 4,
+              height: h,
+              margin: const EdgeInsets.symmetric(horizontal: 2),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.8),
+                borderRadius: BorderRadius.circular(2),
+                boxShadow: [
+                  BoxShadow(color: color.withOpacity(0.5), blurRadius: 4),
+                ],
+              ),
+            );
+          }),
+        );
+      },
+    );
+  }
+}
+
+class _CornerBrackets extends StatelessWidget {
+  const _CornerBrackets();
+
+  @override
+  Widget build(BuildContext context) {
+    Widget corner(Alignment alignment, bool top, bool left) {
+      final c = kGreen.withOpacity(0.5);
+      return Align(
+        alignment: alignment,
+        child: Container(
+          width: 14,
+          height: 14,
+          decoration: BoxDecoration(
+            border: Border(
+              top: top ? BorderSide(color: c, width: 2) : BorderSide.none,
+              left: left ? BorderSide(color: c, width: 2) : BorderSide.none,
+              bottom: !top ? BorderSide(color: c, width: 2) : BorderSide.none,
+              right: !left ? BorderSide(color: c, width: 2) : BorderSide.none,
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Stack(
+      children: [
+        corner(Alignment.topLeft, true, true),
+        corner(Alignment.topRight, true, false),
+        corner(Alignment.bottomLeft, false, true),
+        corner(Alignment.bottomRight, false, false),
+      ],
+    );
+  }
+}
+
+// ===== DOWNLOAD COMPLETE OVERLAY =====
+class DownloadCompleteOverlay extends StatefulWidget {
+  const DownloadCompleteOverlay({super.key});
+
+  @override
+  State<DownloadCompleteOverlay> createState() =>
+      _DownloadCompleteOverlayState();
+}
+
+class _DownloadCompleteOverlayState extends State<DownloadCompleteOverlay>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1900),
+    )..forward();
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned.fill(
+      child: IgnorePointer(
+        child: AnimatedBuilder(
+          animation: _ctrl,
+          builder: (_, __) {
+            final t = _ctrl.value;
+            final flash =
+                t < 0.25 ? (t / 0.25) : (1 - (t - 0.25) / 0.75).clamp(0.0, 1.0);
+            final scale = t < 0.3
+                ? 0.4 + 1.4 * (t / 0.3)
+                : 1.8 - 0.8 * ((t - 0.3) / 0.25).clamp(0.0, 1.0);
+            final fade = t > 0.6 ? (1 - (t - 0.6) / 0.4).clamp(0.0, 1.0) : 1.0;
+            return Stack(
+              fit: StackFit.expand,
+              children: [
+                // green flash
+                Container(color: kGreen.withOpacity(0.18 * flash)),
+                // particles burst
+                CustomPaint(painter: _ParticlesPainter(t: t)),
+                // center content
+                Center(
+                  child: Opacity(
+                    opacity: fade,
+                    child: Transform.scale(
+                      scale: scale,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 84,
+                            height: 84,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: kGreen.withOpacity(0.12),
+                              border: Border.all(color: kGreen, width: 2),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: kGreen.withOpacity(0.5),
+                                  blurRadius: 30,
+                                  spreadRadius: 4,
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.check_rounded,
+                              color: kGreen,
+                              size: 52,
+                            ),
+                          ),
+                          const SizedBox(height: 18),
+                          const GlitchText(
+                            text: '⚡ DOWNLOAD COMPLETE',
+                            intensity: 1.4,
+                            style: TextStyle(
+                              fontFamily: kMono,
+                              color: kGreen,
+                              fontSize: 17,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 2,
+                              shadows: [
+                                Shadow(
+                                  color: Color(0x9939FF14),
+                                  blurRadius: 14,
+                                ),
+                                Shadow(
+                                  color: Colors.black,
+                                  blurRadius: 2,
+                                  offset: Offset(1, 2),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'FILE SAVED TO DOWNLOAD/DEBDOWN+',
+                            style: TextStyle(
+                              fontFamily: kMonoTerminal,
+                              fontSize: 9,
+                              letterSpacing: 1,
+                              color: Colors.grey.shade400,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _ParticlesPainter extends CustomPainter {
+  final double t; // 0..1
+
+  _ParticlesPainter({required this.t});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (t > 0.55) return;
+    final center = Offset(size.width / 2, size.height / 2 - 40);
+    const n = 16;
+    for (var i = 0; i < n; i++) {
+      final a = (i / n) * 2 * math.pi;
+      final dist = 60 + 140 * (t / 0.55);
+      final p = Offset(
+        center.dx + dist * math.cos(a),
+        center.dy + dist * math.sin(a),
+      );
+      final alpha = (1 - t / 0.55) * 0.7;
+      canvas.drawCircle(p, 2.5, Paint()..color = kGreen.withOpacity(alpha));
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _ParticlesPainter old) => old.t != t;
+}
+
+// ===== TUTORIAL SHEET (Cara Pakai) =====
+class TutorialSheet extends StatefulWidget {
+  const TutorialSheet({super.key});
+
+  @override
+  State<TutorialSheet> createState() => _TutorialSheetState();
+}
+
+class _TutorialSheetState extends State<TutorialSheet>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 650),
+    )..forward();
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => Navigator.pop(context),
+      child: Container(
+        color: Colors.black.withOpacity(0.55),
+        child: Align(
+          alignment: Alignment.bottomCenter,
+          child: GestureDetector(
+            onTap: () {},
+            child: Container(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.78,
+              ),
+              width: double.infinity,
+              margin: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: kGreen.withOpacity(0.25),
+                    blurRadius: 40,
+                    spreadRadius: 2,
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [Color(0x330A1A0A), Color(0xE6050505)],
+                      ),
+                      border: Border.all(color: kGreen.withOpacity(0.5)),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // drag handle
+                        Container(
+                          width: 42,
+                          height: 4,
+                          margin: const EdgeInsets.only(top: 10),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade700,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        const GlitchText(
+                          text: '⚡ CARA PAKAI DEBDOWN+',
+                          intensity: 1.3,
+                          style: TextStyle(
+                            fontFamily: kMono,
+                            color: kGreen,
+                            fontSize: 19,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 2,
+                            shadows: [
+                              Shadow(
+                                color: Color(0x6639FF14),
+                                blurRadius: 12,
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Gampang banget, 2 cara aja 👇',
+                          style: TextStyle(
+                            fontFamily: kMono,
+                            color: Colors.grey.shade400,
+                            fontSize: 12,
+                            letterSpacing: 1,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Flexible(
+                          child: SingleChildScrollView(
+                            padding: const EdgeInsets.symmetric(horizontal: 14),
+                            child: Column(
+                              children: [
+                                _TutorialStep(
+                                  anim: _ctrl,
+                                  index: 0,
+                                  icon: Icons.copy,
+                                  color: kYellow,
+                                  title: 'CARA 1 • COPY & PASTE',
+                                  lines: [
+                                    'Buka app TikTok / IG / YT, ketuk ikon SHARE '
+                                        'di video yang mau diambil',
+                                    'Pilih COPY LINK, atau langsung "Copy" dari '
+                                        'kolom share',
+                                    'Buka ⚡DebDown+ → tempel (paste) link di '
+                                        'kolom di atas 👆',
+                                  ],
+                                ),
+                                _TutorialStep(
+                                  anim: _ctrl,
+                                  index: 1,
+                                  icon: Icons.ios_share,
+                                  color: kGreen,
+                                  title: 'CARA 2 • SHARE LANGSUNG',
+                                  lines: [
+                                    'Di app video, ketuk SHARE',
+                                    'Pilih ⚡DebDown+ di daftar share sheet',
+                                    'Auto! Link langsung masuk & download jalan '
+                                        'sendiri 🚀',
+                                  ],
+                                ),
+                                _TutorialStep(
+                                  anim: _ctrl,
+                                  index: 2,
+                                  icon: Icons.tune,
+                                  color: kPurple,
+                                  title: 'PILIH FORMAT',
+                                  lines: [
+                                    'MP4 = video + suara (paling umum)',
+                                    'MP3 = audio aja, buat dengerin doang 🎧',
+                                    'Bisa ganti-ganti kapan aja sebelum download',
+                                  ],
+                                ),
+                                _TutorialStep(
+                                  anim: _ctrl,
+                                  index: 3,
+                                  icon: Icons.download_done,
+                                  color: kCyan,
+                                  title: 'TEKAN START DOWNLOAD 🔥',
+                                  lines: [
+                                    'Tunggu progress sampai 100%',
+                                    'File otomatis masuk folder '
+                                        'Download/DebDown+',
+                                    'Support YouTube, TikTok, IG, X, FB, '
+                                        'SoundCloud & 1000+ situs!',
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 14),
+                          child: _GlassButton(
+                            label: 'SIAP, GAS!',
+                            icon: Icons.bolt,
+                            color: kGreen,
+                            onTap: () => Navigator.pop(context),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TutorialStep extends StatelessWidget {
+  final Animation<double> anim;
+  final int index;
+  final IconData icon;
+  final Color color;
+  final String title;
+  final List<String> lines;
+
+  const _TutorialStep({
+    required this.anim,
+    required this.index,
+    required this.icon,
+    required this.color,
+    required this.title,
+    required this.lines,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // staggered slide-in per step
+    final start = 0.08 + index * 0.16;
+    final end = start + 0.3;
+    return AnimatedBuilder(
+      animation: anim,
+      builder: (_, __) {
+        final t = ((anim.value - start) / (end - start)).clamp(0.0, 1.0);
+        return Opacity(
+          opacity: t,
+          child: Transform.translate(
+            offset: Offset(0, 24 * (1 - t)),
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(14),
+                color: Colors.white.withOpacity(0.03),
+                border: Border.all(color: color.withOpacity(0.35)),
+                boxShadow: [
+                  BoxShadow(
+                    color: color.withOpacity(0.12),
+                    blurRadius: 16,
+                  ),
+                ],
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: color.withOpacity(0.12),
+                      border: Border.all(color: color.withOpacity(0.6)),
+                    ),
+                    child: Icon(icon, color: color, size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: TextStyle(
+                            fontFamily: kMono,
+                            color: color,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 1.2,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        for (final line in lines)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 3),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '▸ ',
+                                  style: TextStyle(
+                                    color: color.withOpacity(0.7),
+                                    fontSize: 10,
+                                  ),
+                                ),
+                                Expanded(
+                                  child: Text(
+                                    line,
+                                    style: TextStyle(
+                                      fontFamily: kMono,
+                                      color: Colors.grey.shade300,
+                                      fontSize: 11,
+                                      height: 1.35,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
 }
 
 // ===== ZOOM IMAGE VIEW =====

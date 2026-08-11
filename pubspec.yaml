@@ -1,7 +1,7 @@
 name: debdown_plus
 description: "DebDown+ - Ultimate yt-dlp Video Downloader with Glitch Hacker Theme"
 publish_to: 'none'
-version: 1.2.0+1
+version: 1.3.0+1
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -26,3 +26,18 @@ flutter:
   assets:
     - assets/profile.png
     - assets/qr_dana.png
+  fonts:
+    - family: Saira
+      fonts:
+        - asset: assets/fonts/Saira-Variable.ttf
+          weight: 300
+        - asset: assets/fonts/Saira-Variable.ttf
+          weight: 400
+        - asset: assets/fonts/Saira-Variable.ttf
+          weight: 500
+        - asset: assets/fonts/Saira-Variable.ttf
+          weight: 600
+        - asset: assets/fonts/Saira-Variable.ttf
+          weight: 700
+        - asset: assets/fonts/Saira-Variable.ttf
+          weight: 900

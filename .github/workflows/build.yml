@@ -62,14 +62,17 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Build APK Release
-        run: flutter build apk --release
+      - name: Build APK Release (split per ABI)
+        run: flutter build apk --release --split-per-abi
 
-      - name: Upload APK Artifact
+      - name: Upload APK Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: DebDown-Plus-Release
-          path: build/app/outputs/flutter-apk/app-release.apk
+          path: |
+            build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+            build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk
+            build/app/outputs/flutter-apk/app-x86_64-release.apk
 
       - name: Create GitHub Release with APK
         env:
@@ -77,12 +80,26 @@ jobs:
         run: |
           TAG="v$(grep '^version:' pubspec.yaml | awk '{print $2}' | cut -d'+' -f1)"
           echo "Release tag: $TAG"
-          gh release create "$TAG" \
-            build/app/outputs/flutter-apk/app-release.apk \
+          cd build/app/outputs/flutter-apk
+          # Rename for clarity
+          cp app-arm64-v8a-release.apk DebDownPlus-${TAG}-arm64-v8a.apk
+          cp app-armeabi-v7a-release.apk DebDownPlus-${TAG}-armeabi-v7a.apk
+          cp app-x86_64-release.apk DebDownPlus-${TAG}-x86_64.apk
+          # arm64 (untuk hampir semua HP) jadi APK utama
+          cp app-arm64-v8a-release.apk DebDownPlus.apk
+          gh release create "$TAG" DebDownPlus.apk \
+            DebDownPlus-${TAG}-arm64-v8a.apk \
+            DebDownPlus-${TAG}-armeabi-v7a.apk \
+            DebDownPlus-${TAG}-x86_64.apk \
             --repo "$GITHUB_REPOSITORY" \
             --title "DebDown+ $TAG" \
-            --notes "Auto-generated APK build." || \
-          gh release upload "$TAG" \
-            build/app/outputs/flutter-apk/app-release.apk \
+            --notes "APK per-arsitektur (ABI split):
+            - **DebDownPlus.apk** (arm64-v8a): untuk hampir semua HP modern (2017+) — PAKAI INI
+            - armeabi-v7a: HP lama 32-bit
+            - x86_64: emulator" || \
+          gh release upload "$TAG" DebDownPlus.apk \
+            DebDownPlus-${TAG}-arm64-v8a.apk \
+            DebDownPlus-${TAG}-armeabi-v7a.apk \
+            DebDownPlus-${TAG}-x86_64.apk \
             --repo "$GITHUB_REPOSITORY" \
             --clobber
