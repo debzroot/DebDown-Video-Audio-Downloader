@@ -34,8 +34,12 @@ jobs:
         uses: android-actions/setup-android@v3
         with:
           api-level: 34
-          build-tools-version: '29.0.3'
+          build-tools-version: '30.0.3'
           emulator: false
+
+      - name: Install build-tools 29.0.3 (required by sign-android-release)
+        run: |
+          yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager "build-tools;29.0.3" > /dev/null
 
       - name: Initialize Flutter Project Scaffolding
         run: |
