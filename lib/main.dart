@@ -54,7 +54,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   
   bool _isDownloading = false;
   double _downloadProgress = 0.0;
-  String _statusMessage = 'SYSTEM READY [v1.0.0]';
+  String _statusMessage = 'SYSTEM READY [v1.1.0]';
   String _updateStatus = 'Checking updates...';
   StreamSubscription<dynamic>? _shareSub;
   final List<String> _logs = [];
@@ -69,7 +69,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   @override
   void initState() {
     super.initState();
-    _log('App started v1.0.0');
+    _log('App started v1.1.0');
     _requestPermissions();
     _checkForUpdates();
     _initShareIntent();
@@ -671,7 +671,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     try {
       final dir = await getTemporaryDirectory();
       final file = File('${dir.path}/debdown_logs.txt');
-      final header = 'DEBDOWN+ v1.0.0 - SYSTEM LOGS\n'
+      final header = 'DEBDOWN+ v1.1.0 - SYSTEM LOGS\n'
           'Generated: ${DateTime.now()}\n'
           'Device: ${Platform.operatingSystem} ${Platform.operatingSystemVersion}\n'
           '${'=' * 40}\n\n';
