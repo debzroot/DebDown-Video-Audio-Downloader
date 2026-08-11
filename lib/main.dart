@@ -1384,7 +1384,7 @@ class _TerminalConsole extends StatelessWidget {
                     ),
                   ),
                 ),
-              ),
+              ],
             ],
           ),
           const SizedBox(height: 8),
