@@ -176,6 +176,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         }
       }
 
+      // After loop: video & manifest are guaranteed non-null (rethrow on last attempt)
+      final resolvedVideo = video!;
+      final resolvedManifest = manifest!;
+
       setState(() => _statusMessage = 'Downloading ${_selectedFormat.toUpperCase()} stream...');
 
       Directory? downloadDir;
@@ -190,12 +194,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
       String customName = _fileNameController.text.trim();
       if (customName.isEmpty) {
-        customName = video.title.replaceAll(RegExp(r'[^\w\s]+'), '_');
+        customName = resolvedVideo.title.replaceAll(RegExp(r'[^\w\s]+'), '_');
       }
 
       File file;
       if (_selectedFormat == 'mp4') {
-        var streamInfo = manifest.videoOnly.withHighestBitrate();
+        var streamInfo = resolvedManifest.videoOnly.withHighestBitrate();
         var stream = yt.videos.streamsClient.get(streamInfo);
         file = File('${downloadDir?.path}/$customName.mp4');
         
@@ -214,7 +218,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         await outputStream.flush();
         await outputStream.close();
       } else {
-        var streamInfo = manifest.audioOnly.withHighestBitrate();
+        var streamInfo = resolvedManifest.audioOnly.withHighestBitrate();
         var stream = yt.videos.streamsClient.get(streamInfo);
         file = File('${downloadDir?.path}/$customName.mp3');
         
