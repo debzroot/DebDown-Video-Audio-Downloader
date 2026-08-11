@@ -1,9 +1,11 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:photo_view/photo_view.dart';
@@ -70,8 +72,8 @@ class _HomeScreenState extends State<HomeScreen>
 
   bool _isDownloading = false;
   double _downloadProgress = 0.0;
-  String _statusMessage = 'SYSTEM READY [v1.3.3]';
-  final List<String> _statusLog = ['SYSTEM READY [v1.3.3]'];
+  String _statusMessage = 'SYSTEM READY [v1.3.4]';
+  final List<String> _statusLog = ['SYSTEM READY [v1.3.4]'];
   bool _showComplete = false;
   String _lastSavedPath = 'Download/DebDown+';
   String _engineStatus = 'ENGINE INIT...';
@@ -81,6 +83,11 @@ class _HomeScreenState extends State<HomeScreen>
 
   StreamSubscription<dynamic>? _shareSub;
   StreamSubscription<dynamic>? _ytdlSub;
+
+  // App update checker
+  String? _latestVersion;
+  String? _latestApkUrl;
+  bool _checkingUpdate = false;
 
   @override
   void initState() {
@@ -93,10 +100,11 @@ class _HomeScreenState extends State<HomeScreen>
       vsync: this,
       duration: const Duration(seconds: 2),
     )..repeat(reverse: true);
-    _log('App started v1.3.3');
+    _log('App started v1.3.4');
     _requestPermissions();
     _initEngine();
     _initShareIntent();
+    _checkAppUpdate(); // Auto-check update on start
     _ytdlSub = _ytdlEvents.receiveBroadcastStream().listen(_onEngineEvent);
   }
 
@@ -140,6 +148,90 @@ class _HomeScreenState extends State<HomeScreen>
     } catch (e) {
       setState(() => _engineStatus = 'ENGINE ERROR');
       _log('Engine init error: $e');
+    }
+  }
+
+  // ===== APP UPDATE CHECKER =====
+  Future<void> _checkAppUpdate() async {
+    if (_checkingUpdate) return;
+    setState(() => _checkingUpdate = true);
+    try {
+      final response = await http.get(
+        Uri.parse('https://api.github.com/repos/debzroot/debdownplus/releases/latest'),
+        headers: {'Accept': 'application/vnd.github.v3+json'},
+      ).timeout(const Duration(seconds: 10));
+      
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final tag = data['tag_name']?.toString().replaceFirst('v', '') ?? '';
+        final assets = data['assets'] as List?;
+        
+        if (tag.isNotEmpty && assets != null) {
+          // Find arm64 APK
+          String? apkUrl;
+          for (final asset in assets) {
+            final name = asset['name']?.toString() ?? '';
+            if (name.contains('arm64-v8a') && name.endsWith('.apk')) {
+              apkUrl = asset['browser_download_url']?.toString();
+              break;
+            }
+          }
+          // Fallback to universal APK
+          apkUrl ??= assets
+              .where((a) => (a['name']?.toString() ?? '').contains('DebDownPlus.apk'))
+              .map((a) => a['browser_download_url']?.toString())
+              .firstWhere((u) => u != null, orElse: () => null);
+          
+          final currentVersion = '1.3.4';
+          if (_versionCompare(tag, currentVersion) > 0 && apkUrl != null) {
+            setState(() {
+              _latestVersion = tag;
+              _latestApkUrl = apkUrl;
+            });
+            _log('UPDATE AVAILABLE: v$tag (current v$currentVersion)');
+          } else {
+            _log('App up to date: v$currentVersion');
+          }
+        }
+      }
+    } catch (e) {
+      _log('Update check failed: $e');
+    } finally {
+      if (mounted) setState(() => _checkingUpdate = false);
+    }
+  }
+
+  int _versionCompare(String a, String b) {
+    final pa = a.split('.').map(int.parse).toList();
+    final pb = b.split('.').map(int.parse).toList();
+    for (int i = 0; i < 3; i++) {
+      final va = i < pa.length ? pa[i] : 0;
+      final vb = i < pb.length ? pb[i] : 0;
+      if (va != vb) return va.compareTo(vb);
+    }
+    return 0;
+  }
+
+  Future<void> _downloadAndInstallUpdate() async {
+    if (_latestApkUrl == null) return;
+    _log('Downloading update v$_latestVersion...');
+    _setStatus('[INFO] Downloading update v$_latestVersion...');
+    try {
+      final dir = await getExternalStorageDirectory();
+      final apkFile = File('${dir!.path}/DebDownPlus_v$_latestVersion.apk');
+      final response = await http.get(Uri.parse(_latestApkUrl!)).timeout(const Duration(seconds: 120));
+      await apkFile.writeAsBytes(response.bodyBytes);
+      _log('Update downloaded: ${apkFile.path}');
+      _setStatus('[SUCCESS] Update downloaded, opening installer...');
+      // Open APK installer
+      final channel = MethodChannel('debdown/ytdl');
+      await channel.invokeMethod('shareFile', {
+        'path': apkFile.path,
+        'text': 'DebDown+ v$_latestVersion update',
+      });
+    } catch (e) {
+      _log('Update download failed: $e');
+      _setStatus('[ERROR] Update failed: $e');
     }
   }
 
@@ -455,6 +547,8 @@ class _HomeScreenState extends State<HomeScreen>
           _TerminalConsole(
             statusLog: _statusLog,
             cursorCtrl: _cursorCtrl,
+            latestVersion: _latestVersion,
+            onUpdateTap: _latestVersion != null ? _downloadAndInstallUpdate : null,
           ),
           const SizedBox(height: 8),
 
@@ -1220,10 +1314,14 @@ class _GlassButton extends StatelessWidget {
 class _TerminalConsole extends StatelessWidget {
   final List<String> statusLog;
   final AnimationController cursorCtrl;
+  final String? latestVersion;
+  final VoidCallback? onUpdateTap;
 
   const _TerminalConsole({
     required this.statusLog,
     required this.cursorCtrl,
+    this.latestVersion,
+    this.onUpdateTap,
   });
 
   @override
@@ -1255,6 +1353,36 @@ class _TerminalConsole extends StatelessWidget {
                   shadows: [
                     Shadow(color: kGreen.withOpacity(0.6), blurRadius: 6),
                   ],
+                ),
+              ),
+              if (latestVersion != null) ...[
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: onUpdateTap,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: kOrange.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(color: kOrange, width: 1),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.system_update_alt, color: kOrange, size: 10),
+                        const SizedBox(width: 4),
+                        Text(
+                          'v$latestVersion',
+                          style: TextStyle(
+                            color: kOrange,
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ],
