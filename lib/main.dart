@@ -70,8 +70,8 @@ class _HomeScreenState extends State<HomeScreen>
 
   bool _isDownloading = false;
   double _downloadProgress = 0.0;
-  String _statusMessage = 'SYSTEM READY [v1.3.2]';
-  final List<String> _statusLog = ['SYSTEM READY [v1.3.2]'];
+  String _statusMessage = 'SYSTEM READY [v1.3.3]';
+  final List<String> _statusLog = ['SYSTEM READY [v1.3.3]'];
   bool _showComplete = false;
   String _lastSavedPath = 'Download/DebDown+';
   String _engineStatus = 'ENGINE INIT...';
@@ -93,7 +93,7 @@ class _HomeScreenState extends State<HomeScreen>
       vsync: this,
       duration: const Duration(seconds: 2),
     )..repeat(reverse: true);
-    _log('App started v1.3.2');
+    _log('App started v1.3.3');
     _requestPermissions();
     _initEngine();
     _initShareIntent();
@@ -158,15 +158,6 @@ class _HomeScreenState extends State<HomeScreen>
       }
       return;
     }
-    if (type == 'dir') {
-      // Fallback storage: file disimpan di folder app, bukan Download/
-      final path = m['path'] ?? '';
-      setState(() {
-        _setStatus('[INFO] Download/ terkunci. File akan disimpan di: $path');
-      });
-      _log('DIR FALLBACK: $path (aktifkan All Files Access biar simpan di Download/)');
-      return;
-    }
     if (type == 'download') {
       final status = m['status'];
       final line = m['line'];
@@ -209,11 +200,11 @@ class _HomeScreenState extends State<HomeScreen>
     if (!manage.isGranted) manage = await Permission.manageExternalStorage.request();
 
     if (manage.isGranted) {
-      _log('Storage: All Files Access GRANTED');
+      _log('Storage: All Files Access GRANTED — Download/ terbuka');
     } else if (storage.isGranted) {
-      _log('Storage: partial (media only) — Download/ mungkin butuh All Files Access');
+      _log('Storage: partial (media only) — Download/ butuh All Files Access');
     } else {
-      _log('Storage: NOT granted (fallback ke folder app otomatis)');
+      _log('Storage: NOT granted — Download/ mungkin gagal (aktifkan All Files Access di Settings)');
     }
   }
 
@@ -332,24 +323,7 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: const GlitchText(
-          text: '⚡ DEBDOWN+',
-          style: TextStyle(
-            color: kGreen,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 2.0,
-            fontSize: 20,
-            shadows: [
-              Shadow(color: Color(0x6639FF14), blurRadius: 12),
-              Shadow(color: Colors.black, blurRadius: 3, offset: Offset(1, 2)),
-            ],
-          ),
-        ),
-      ),
+      backgroundColor: Colors.transparent,
       body: Stack(
         children: [
           const HackerBackground(),
@@ -407,14 +381,13 @@ class _HomeScreenState extends State<HomeScreen>
     return Stack(
       children: [
         SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-          const SizedBox(height: 8),
-          // Glitch banner (port dari New_file.txt - Compose GlitchBanner)
+          // Glitch banner - NOW THE HEADER (port dari New_file.txt - Compose GlitchBanner)
           const GlitchBanner(),
-          const SizedBox(height: 16),
+          const SizedBox(height: 8),
 
           // CARA PAKAI button
           _GlassButton(
@@ -423,7 +396,7 @@ class _HomeScreenState extends State<HomeScreen>
             color: kCyan,
             onTap: _showTutorial,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 8),
 
           // URL input
           _GlassField(
@@ -431,7 +404,7 @@ class _HomeScreenState extends State<HomeScreen>
             label: 'Paste Link (YT / TikTok / IG / dll)',
             icon: Icons.link,
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 6),
 
           // Format selector
           Row(
@@ -441,7 +414,7 @@ class _HomeScreenState extends State<HomeScreen>
                 selected: _selectedFormat == 'mp4',
                 onTap: () => setState(() => _selectedFormat = 'mp4'),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 8),
               _FormatChip(
                 label: 'MP3 (Audio)',
                 selected: _selectedFormat == 'mp3',
@@ -449,7 +422,7 @@ class _HomeScreenState extends State<HomeScreen>
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
 
           // Download button
           _GlassButton(
@@ -459,7 +432,7 @@ class _HomeScreenState extends State<HomeScreen>
             onTap: _isDownloading ? null : _startDownload,
           ),
           if (_isDownloading) ...[
-            const SizedBox(height: 10),
+            const SizedBox(height: 6),
             _GlassButton(
               label: 'CANCEL',
               icon: Icons.stop,
@@ -467,7 +440,7 @@ class _HomeScreenState extends State<HomeScreen>
               onTap: _cancelDownload,
             ),
           ],
-          const SizedBox(height: 16),
+          const SizedBox(height: 8),
 
           // Hacker progress panel
           if (_isDownloading) ...[
@@ -476,7 +449,7 @@ class _HomeScreenState extends State<HomeScreen>
               statusLine: _statusMessage,
               isError: _statusMessage.startsWith('[ERROR]'),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 8),
           ],
 
           // Status console (terminal) - fixed height, syntax highlight
@@ -484,11 +457,11 @@ class _HomeScreenState extends State<HomeScreen>
             statusLog: _statusLog,
             cursorCtrl: _cursorCtrl,
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 8),
 
           // Supported platform icons (isi area kosong bawah)
           const _PlatformGrid(),
-          const SizedBox(height: 12),
+          const SizedBox(height: 4),
             ],
           ),
         ),
@@ -504,11 +477,10 @@ class _HomeScreenState extends State<HomeScreen>
   // ===== DEV TAB =====
   Widget _buildDevTab() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          const SizedBox(height: 30),
           const GlitchText(
             text: '🚀 DEVELOPER',
             style: TextStyle(
@@ -518,7 +490,7 @@ class _HomeScreenState extends State<HomeScreen>
               letterSpacing: 2,
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 12),
 
           // Profile
           GestureDetector(
@@ -532,8 +504,8 @@ class _HomeScreenState extends State<HomeScreen>
               ),
             ),
             child: Container(
-              width: 120,
-              height: 120,
+              width: 90,
+              height: 90,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(color: kGreen, width: 2),
@@ -547,7 +519,7 @@ class _HomeScreenState extends State<HomeScreen>
               ),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 6),
           const Text(
             '✨ Debz ✨',
             style: TextStyle(
@@ -556,7 +528,7 @@ class _HomeScreenState extends State<HomeScreen>
               shadows: [Shadow(color: Color(0x6639FF14), blurRadius: 8)],
             ),
           ),
-          const SizedBox(height: 28),
+          const SizedBox(height: 14),
 
           // QR DANA
           const GlitchText(
@@ -572,7 +544,7 @@ class _HomeScreenState extends State<HomeScreen>
               ],
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           GestureDetector(
             onTap: () => Navigator.push(
               context,
@@ -584,8 +556,8 @@ class _HomeScreenState extends State<HomeScreen>
               ),
             ),
             child: Container(
-              width: 190,
-              height: 190,
+              width: 150,
+              height: 150,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(color: kPurple, width: 2),
@@ -599,12 +571,12 @@ class _HomeScreenState extends State<HomeScreen>
               ),
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 4),
           const Text(
             'Tap image to Zoom QR DANA',
             style: TextStyle(color: Colors.grey, fontSize: 10),
           ),
-          const SizedBox(height: 28),
+          const SizedBox(height: 14),
 
           // SYSTEM LOGS
           GlassPanel(
@@ -632,7 +604,7 @@ class _HomeScreenState extends State<HomeScreen>
                 ),
                 const SizedBox(height: 8),
                 Container(
-                  height: 150,
+                  height: 120,
                   width: double.infinity,
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
@@ -664,7 +636,7 @@ class _HomeScreenState extends State<HomeScreen>
               ],
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 8),
 
           // SHARE LOGS
           _GlassButton(
@@ -673,7 +645,7 @@ class _HomeScreenState extends State<HomeScreen>
             color: kGreen,
             onTap: _shareLogs,
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 4),
           const Text(
             'Kirim file log ke developer untuk analisa error',
             style: TextStyle(color: Colors.grey, fontSize: 10),
@@ -688,7 +660,7 @@ class _HomeScreenState extends State<HomeScreen>
     try {
       final dir = await getTemporaryDirectory();
       final file = File('${dir.path}/debdown_logs.txt');
-      final header = 'DEBDOWN+ v1.3.2 - SYSTEM LOGS\n'
+      final header = 'DEBDOWN+ v1.3.3 - SYSTEM LOGS\\n'
           'Generated: ${DateTime.now()}\n'
           'Device: ${Platform.operatingSystem} ${Platform.operatingSystemVersion}\n'
           '${'=' * 40}\n\n';

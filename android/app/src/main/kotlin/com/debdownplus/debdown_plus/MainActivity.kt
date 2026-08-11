@@ -159,43 +159,19 @@ class MainActivity : FlutterActivity() {
                 }
 
                 "defaultDir" -> {
+                    // Selalu pakai folder publik Download/DebDown+ biar ketemu file manager biasa
+                    val base = File(
+                        Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+                        "DebDown+"
+                    )
+                    val path = base.absolutePath
+                    // Coba bikin folder kalau belum ada (bisa gagal kalau permission denied)
                     try {
-                        // Coba folder publik Download/DebDown+ dulu
-                        var base = File(
-                            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
-                            "DebDown+"
-                        )
-                        var path = base.absolutePath
-
-                        // Verifikasi beneran bisa ditulis (mkdirs bisa gagal diam-diam kalau ga ada permission)
-                        val writable = try {
-                            if (!base.exists()) base.mkdirs()
-                            val probe = File(path, ".probe")
-                            probe.createNewFile()
-                            probe.delete()
-                            true
-                        } catch (e: Exception) {
-                            false
-                        }
-
-                        if (!writable) {
-                            // Fallback: folder app sendiri (GA PERLU permission, selalu bisa ditulis)
-                            val alt = File(getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), "DebDown+")
-                            alt.mkdirs()
-                            path = alt.absolutePath
-                            runOnUiThread {
-                                progressSink?.success(
-                                    mapOf("type" to "dir", "fallback" to true, "path" to path)
-                                )
-                            }
-                        }
-                        result.success(path)
+                        if (!base.exists()) base.mkdirs()
                     } catch (e: Exception) {
-                        // Fallback terakhir: internal cache
-                        val alt = File(cacheDir, "DebDown+")
-                        alt.mkdirs()
-                        result.success(alt.absolutePath)
+                        // Biarkan error-nya ditangani yt-dlp / engine-nya sendiri
                     }
+                    result.success(path)
                 }
 
                 "shareFile" -> {
