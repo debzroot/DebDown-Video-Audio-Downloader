@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:youtube_explode_dart/youtube_explode_dart.dart' as yt_lib;
@@ -54,6 +55,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   double _downloadProgress = 0.0;
   String _statusMessage = 'SYSTEM READY [v1.0.0]';
   String _updateStatus = 'Checking updates...';
+  StreamSubscription<dynamic>? _shareSub;
 
   @override
   void initState() {
@@ -96,13 +98,38 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   void _initShareIntent() {
     // For sharing incoming links from IG/TikTok/YT
+    // Stream: fires when app is ALREADY open and user shares a link
+    _shareSub = ReceiveSharingIntent.instance.getMediaStream().listen(
+      (List<SharedMediaFile> value) {
+        if (value.isNotEmpty) {
+          final text = value.first.path ?? value.first.text ?? '';
+          if (text.isNotEmpty) {
+            setState(() {
+              _urlController.text = text;
+              _statusMessage = 'LINK INJECTED VIA SHARE-SHEET';
+            });
+            _startDownload();
+          }
+        }
+      },
+      onError: (err) {
+        debugPrint('Share stream error: $err');
+      },
+    );
+
+    // Initial: fires when app was CLOSED and opened via share
     ReceiveSharingIntent.instance.getInitialMedia().then((List<SharedMediaFile> value) {
       if (value.isNotEmpty) {
-        setState(() {
-          _urlController.text = value.first.path;
-          _statusMessage = 'Link received from share intent!';
-        });
+        final text = value.first.path ?? value.first.text ?? '';
+        if (text.isNotEmpty) {
+          setState(() {
+            _urlController.text = text;
+            _statusMessage = 'LINK INJECTED VIA SHARE-SHEET';
+          });
+          WidgetsBinding.instance.addPostFrameCallback((_) => _startDownload());
+        }
       }
+      // Tell the library we are done processing the intent.
       ReceiveSharingIntent.instance.reset();
     });
   }
@@ -198,6 +225,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         _statusMessage = '[ERROR] Failed: ${e.toString()}';
       });
     }
+  }
+
+  @override
+  void dispose() {
+    _shareSub?.cancel();
+    _urlController.dispose();
+    _fileNameController.dispose();
+    super.dispose();
   }
 
   @override
