@@ -102,7 +102,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     _shareSub = ReceiveSharingIntent.instance.getMediaStream().listen(
       (List<SharedMediaFile> value) {
         if (value.isNotEmpty) {
-          final text = value.first.path ?? value.first.text ?? '';
+          final text = value.first.path ?? '';
           if (text.isNotEmpty) {
             setState(() {
               _urlController.text = text;
@@ -120,7 +120,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     // Initial: fires when app was CLOSED and opened via share
     ReceiveSharingIntent.instance.getInitialMedia().then((List<SharedMediaFile> value) {
       if (value.isNotEmpty) {
-        final text = value.first.path ?? value.first.text ?? '';
+        final text = value.first.path ?? '';
         if (text.isNotEmpty) {
           setState(() {
             _urlController.text = text;
