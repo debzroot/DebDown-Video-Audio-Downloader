@@ -10,6 +10,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout repository
@@ -31,6 +33,31 @@ jobs:
       - name: Initialize Flutter Project Scaffolding
         run: |
           flutter create . --org com.debdownplus --project-name debdown_plus --platforms=android
+          # Inject youtubedl-android (yt-dlp + ffmpeg) dependencies into generated build.gradle
+          python3 - <<'PYEOF'
+          p = 'android/app/build.gradle'
+          s = open(p).read()
+          if 'youtubedl' not in s:
+              s = s.replace(
+                  'dependencies {',
+                  "dependencies {\n"
+                  "    implementation 'io.github.junkfood02.youtubedl-android:library:0.18.1'\n"
+                  "    implementation 'io.github.junkfood02.youtubedl-android:ffmpeg:0.18.1'",
+                  1,
+              )
+              s = s.replace(
+                  'minSdkVersion flutter.minSdkVersion',
+                  "minSdkVersion 21\n"
+                  "        ndk {\n"
+                  "            abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86_64'\n"
+                  "        }",
+                  1,
+              )
+              open(p, 'w').write(s)
+              print('patched android/app/build.gradle with youtubedl-android')
+          else:
+              print('build.gradle already patched')
+          PYEOF
 
       - name: Install dependencies
         run: flutter pub get
