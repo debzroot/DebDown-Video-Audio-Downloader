@@ -72,8 +72,8 @@ class _HomeScreenState extends State<HomeScreen>
 
   bool _isDownloading = false;
   double _downloadProgress = 0.0;
-  String _statusMessage = 'SYSTEM READY [v1.3.4]';
-  final List<String> _statusLog = ['SYSTEM READY [v1.3.4]'];
+  String _statusMessage = 'SYSTEM READY [v1.3.5]';
+  final List<String> _statusLog = ['SYSTEM READY [v1.3.5]'];
   bool _showComplete = false;
   String _lastSavedPath = 'Download/DebDown+';
   String _engineStatus = 'ENGINE INIT...';
@@ -100,7 +100,7 @@ class _HomeScreenState extends State<HomeScreen>
       vsync: this,
       duration: const Duration(seconds: 2),
     )..repeat(reverse: true);
-    _log('App started v1.3.4');
+    _log('App started v1.3.5');
     _requestPermissions();
     _initEngine();
     _initShareIntent();
@@ -182,7 +182,7 @@ class _HomeScreenState extends State<HomeScreen>
               .map((a) => a['browser_download_url']?.toString())
               .firstWhere((u) => u != null, orElse: () => null);
           
-          final currentVersion = '1.3.4';
+          final currentVersion = '1.3.5';
           if (_versionCompare(tag, currentVersion) > 0 && apkUrl != null) {
             setState(() {
               _latestVersion = tag;
@@ -578,7 +578,7 @@ class _HomeScreenState extends State<HomeScreen>
             child: IntrinsicHeight(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
           const GlitchText(
             text: '🚀 DEVELOPER',
@@ -763,7 +763,7 @@ class _HomeScreenState extends State<HomeScreen>
     try {
       final dir = await getTemporaryDirectory();
       final file = File('${dir.path}/debdown_logs.txt');
-      final header = 'DEBDOWN+ v1.3.3 - SYSTEM LOGS\\n'
+      final header = 'DEBDOWN+ v1.3.5 - SYSTEM LOGS\\n'
           'Generated: ${DateTime.now()}\n'
           'Device: ${Platform.operatingSystem} ${Platform.operatingSystemVersion}\n'
           '${'=' * 40}\n\n';

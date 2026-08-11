@@ -33,10 +33,10 @@
 
 | Arsitektur | File | Ukuran | Cocok Buat |
 |------------|------|--------|------------|
-| **arm64-v8a** | [`DebDownPlus-v1.3.3-arm64-v8a.apk`](https://github.com/debzroot/debdownplus/releases/download/v1.3.3/DebDownPlus-v1.3.3-arm64-v8a.apk) | 61.8 MB | **HP modern 2017+ (ampir semua)** |
-| **armeabi-v7a** | [`DebDownPlus-v1.3.3-armeabi-v7a.apk`](https://github.com/debzroot/debdownplus/releases/download/v1.3.3/DebDownPlus-v1.3.3-armeabi-v7a.apk) | **54.7 MB** | HP lama 32-bit (pre-2017) |
-| **x86_64** | [`DebDownPlus-v1.3.3-x86_64.apk`](https://github.com/debzroot/debdownplus/releases/download/v1.3.3/DebDownPlus-v1.3.3-x86_64.apk) | 65.0 MB | Emulator saja |
-| **Universal** | [`DebDownPlus.apk`](https://github.com/debzroot/debdownplus/releases/download/v1.3.3/DebDownPlus.apk) | 61.8 MB | Copy arm64 (default) |
+| **arm64-v8a** | [`DebDownPlus-v1.3.4-arm64-v8a.apk`](https://github.com/debzroot/debdownplus/releases/download/v1.3.4/DebDownPlus-v1.3.4-arm64-v8a.apk) | 62.0 MB | **HP modern 2017+ (ampir semua)** |
+| **armeabi-v7a** | [`DebDownPlus-v1.3.4-armeabi-v7a.apk`](https://github.com/debzroot/debdownplus/releases/download/v1.3.4/DebDownPlus-v1.3.4-armeabi-v7a.apk) | **54.9 MB** | HP lama 32-bit (pre-2017) |
+| **x86_64** | [`DebDownPlus-v1.3.4-x86_64.apk`](https://github.com/debzroot/debdownplus/releases/download/v1.3.4/DebDownPlus-v1.3.4-x86_64.apk) | 65.2 MB | Emulator saja |
+| **Universal** | [`DebDownPlus.apk`](https://github.com/debzroot/debdownplus/releases/download/v1.3.4/DebDownPlus.apk) | 62.0 MB | Copy arm64 (default) |
 
 👉 **Bingung? Download `DebDownPlus.apk` aja — itu versi arm64 yang paling umum dipakai.**
 
