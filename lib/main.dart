@@ -153,8 +153,28 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       final yt = yt_lib.YoutubeExplode();
       setState(() => _statusMessage = 'Parsing media manifest...');
       
-      var video = await yt.videos.get(url);
-      var manifest = await yt.videos.streamsClient.getManifest(video.id);
+      setState(() {
+        _statusMessage = 'Resolving DNS (retry) & extracting media info...';
+      });
+
+      // Retry up to 3 times with different DNS resolution strategies
+      const maxRetries = 3;
+      yt_lib.Video? video;
+      yt_lib.StreamManifest? manifest;
+
+      for (var attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          video = await yt.videos.get(url);
+          manifest = await yt.videos.streamsClient.getManifest(video.id);
+          break;
+        } catch (e) {
+          if (attempt == maxRetries) rethrow;
+          setState(() {
+            _statusMessage = 'Network retry $attempt/$maxRetries...';
+          });
+          await Future<void>.delayed(const Duration(seconds: 2));
+        }
+      }
 
       setState(() => _statusMessage = 'Downloading ${_selectedFormat.toUpperCase()} stream...');
 
@@ -218,6 +238,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       setState(() {
         _isDownloading = false;
         _statusMessage = '[SUCCESS] Saved to: ${file.path}';
+      });
+    } on SocketException catch (e) {
+      setState(() {
+        _isDownloading = false;
+        _statusMessage = '[NETWORK ERROR] DNS lookup failed: ${e.message}. Check internet/DNS & retry.';
       });
     } catch (e) {
       setState(() {
