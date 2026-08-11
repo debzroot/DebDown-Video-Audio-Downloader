@@ -8,7 +8,7 @@ import 'package:receive_sharing_intent/receive_sharing_intent.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:photo_view/photo_view.dart';
-import 'package:share_plus/share_plus.dart';
+import 'package:flutter/services.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -677,10 +677,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           '${'=' * 40}\n\n';
       await file.writeAsString(header + _logs.join('\n'));
       _log('Logs written to ${file.path}');
-      await Share.shareXFiles(
-        [XFile(file.path, mimeType: 'text/plain')],
-        text: 'DebDown+ v1.0.0 logs - please analyze',
-      );
+      // Native share via MethodChannel (share sheet with FileProvider)
+      const channel = MethodChannel('com.debdownplus/share');
+      await channel.invokeMethod('shareFile', {
+        'path': file.path,
+        'text': 'DebDown+ v1.0.0 logs - please analyze',
+      });
     } catch (e) {
       _log('SHARE LOGS ERROR: $e');
       setState(() {
