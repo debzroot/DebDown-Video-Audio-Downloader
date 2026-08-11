@@ -100,7 +100,7 @@ class _HomeScreenState extends State<HomeScreen>
       vsync: this,
       duration: const Duration(seconds: 2),
     )..repeat(reverse: true);
-    _log('App started v1.3.5');
+    _log('App Started');
     _requestPermissions();
     _initEngine();
     _initShareIntent();
@@ -182,7 +182,7 @@ class _HomeScreenState extends State<HomeScreen>
               .map((a) => a['browser_download_url']?.toString())
               .firstWhere((u) => u != null, orElse: () => null);
           
-          final currentVersion = '1.3.5';
+          final currentVersion = '6.6.6';
           if (_versionCompare(tag, currentVersion) > 0 && apkUrl != null) {
             setState(() {
               _latestVersion = tag;
@@ -763,7 +763,7 @@ class _HomeScreenState extends State<HomeScreen>
     try {
       final dir = await getTemporaryDirectory();
       final file = File('${dir.path}/debdown_logs.txt');
-      final header = 'DEBDOWN+ v1.3.5 - SYSTEM LOGS\\n'
+      final header = 'DEBDOWN+ - SYSTEM LOGS\\n'
           'Generated: ${DateTime.now()}\n'
           'Device: ${Platform.operatingSystem} ${Platform.operatingSystemVersion}\n'
           '${'=' * 40}\n\n';
@@ -772,7 +772,7 @@ class _HomeScreenState extends State<HomeScreen>
       const channel = MethodChannel('debdown/ytdl');
       await channel.invokeMethod('shareFile', {
         'path': file.path,
-        'text': 'DebDown+ v1.2.0 logs - please analyze',
+        'text': 'DebDown+ - please analyze',
       });
     } catch (e) {
       _log('SHARE LOGS ERROR: $e');
@@ -922,7 +922,7 @@ class _PlatformGrid extends StatelessWidget {
           style: TextStyle(
             fontFamily: kMono,
             color: Colors.grey.shade500,
-            fontSize: 10,
+            fontSize: 12,
             letterSpacing: 1,
           ),
         ),
