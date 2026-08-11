@@ -47,10 +47,7 @@ jobs:
               )
               s = s.replace(
                   'minSdkVersion flutter.minSdkVersion',
-                  "minSdkVersion 24\n"
-                  "        ndk {\n"
-                  "            abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86_64'\n"
-                  "        }",
+                  "minSdkVersion 24",
                   1,
               )
               open(p, 'w').write(s)
