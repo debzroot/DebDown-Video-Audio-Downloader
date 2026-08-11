@@ -1,5 +1,5 @@
 <h1 align="center">⚡ DebDown+</h1>
-<p align="center"><b>Video / Audio Downloader • yt-dlp Native • Glitch Hacker Theme</b></p>
+<p align="center"><b>Video / Audio Downloader • yt-dlp Native •</b></p>
 
 <p align="center">
   <a href="https://github.com/debzroot/debdownplus/releases/latest"><img alt="Latest Release" src="https://img.shields.io/github/v/release/debzroot/debdownplus?style=for-the-badge&color=39FF14&labelColor=050505"></a>
