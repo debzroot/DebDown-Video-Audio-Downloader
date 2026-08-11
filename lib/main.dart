@@ -237,7 +237,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         final muxed = resolvedManifest.muxed;
         if (muxed.isNotEmpty) {
           streamInfo = muxed.withHighestBitrate();
-          _log('Using muxed stream (video+audio): ${streamInfo.videoQuality.label}');
+          _log('Using muxed stream (video+audio): ${streamInfo.videoQuality.qualityString}');
         } else {
           streamInfo = resolvedManifest.videoOnly.withHighestBitrate();
           _log('WARNING: no muxed stream available, fallback videoOnly (no audio)');
@@ -261,7 +261,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         await outputStream.close();
       } else {
         var streamInfo = resolvedManifest.audioOnly.withHighestBitrate();
-        _log('Using audioOnly stream: ${streamInfo.audioQuality.label}');
+        _log('Using audioOnly stream: ${streamInfo.audioCodec}');
         var stream = yt.videos.streamsClient.get(streamInfo);
         file = File('${downloadDir?.path}/$customName.mp3');
         
