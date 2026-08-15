@@ -40,18 +40,11 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
         with:
-          api-level: 34
-          ndk-version: r26c
-          build-tools-version: 34.0.0
+          packages: 'platforms;android-34 build-tools;34.0.0 ndk;26.1.10909125'
+          accept-android-sdk-licenses: true
 
       - name: Get dependencies
         run: flutter pub get
-
-      - name: Verify yt-dlp binaries in assets
-        run: |
-          ls -la assets/
-          # Check if we have yt-dlp binaries for each arch
-          # If not, they'll be downloaded at runtime
 
       - name: Build APK (split per ABI)
         run: flutter build apk --release --split-per-abi
