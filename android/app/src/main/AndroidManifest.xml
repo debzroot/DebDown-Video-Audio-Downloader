@@ -29,8 +29,8 @@
         </intent>
     </queries>
 
+    <!-- v2 embedding: NO android:name on application -->
     <application
-        android:name="io.flutter.app.FlutterApplication"
         android:label="DebDown+"
         android:icon="@mipmap/ic_launcher"
         android:requestLegacyExternalStorage="true"
@@ -74,7 +74,7 @@
             </intent-filter>
         </activity>
 
-        <!-- Flutter v2 embedding -->
+        <!-- Flutter v2 embedding marker -->
         <meta-data
             android:name="flutterEmbedding"
             android:value="2"/>
