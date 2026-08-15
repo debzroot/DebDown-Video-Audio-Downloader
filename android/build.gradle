@@ -25,14 +25,3 @@ subprojects {
 tasks.register("clean", Delete) {
     delete rootProject.buildDir
 }
-
-// Apply Flutter plugin to :app module only
-project(':app').withPlugin('com.android.application') {
-    def flutterProjectRoot = rootProject.projectDir.parentFile.toString()
-    def flutterSdkPath = System.getenv('FLUTTER_ROOT')
-    if (flutterSdkPath == null) {
-        throw new org.gradle.api.GradleException('FLUTTER_ROOT environment variable not set')
-    }
-    def flutterGradlePlugin = "${flutterSdkPath}/packages/flutter_tools/gradle/flutter.gradle"
-    apply from: flutterGradlePlugin
-}
