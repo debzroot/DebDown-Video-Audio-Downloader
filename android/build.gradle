@@ -1,9 +1,4 @@
 buildscript {
-    repositories {
-        google()
-        mavenCentral()
-        gradlePluginPortal()
-    }
     dependencies {
         classpath 'com.android.tools.build:gradle:8.1.2'
         classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:1.8.22'
@@ -11,10 +6,7 @@ buildscript {
 }
 
 allprojects {
-    repositories {
-        google()
-        mavenCentral()
-    }
+    // Repositories are defined in settings.gradle
 }
 
 rootProject.buildDir = '../build'
