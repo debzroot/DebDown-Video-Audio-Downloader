@@ -1,0 +1,11 @@
+include ':app'
+
+// Flutter
+def flutterProjectRoot = rootProject.projectDir.parentFile.toString()
+def flutterSdkPath = System.getenv('FLUTTER_ROOT')
+if (flutterSdkPath == null) {
+    throw GradleException('FLUTTER_ROOT environment variable not set')
+}
+
+def flutterGradlePlugin = "${flutterSdkPath}/packages/flutter_tools/gradle/flutter.gradle"
+apply from: flutterGradlePlugin

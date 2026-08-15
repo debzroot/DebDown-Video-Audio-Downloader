@@ -1,0 +1,84 @@
+plugins {
+    id 'com.android.application'
+    id 'kotlin-android'
+    id 'dev.flutter.flutter-gradle-plugin'
+}
+
+android {
+    namespace 'com.debdownplus.debdown_plus'
+    compileSdk 34
+    ndkVersion '26.1.10909125'
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    kotlinOptions {
+        jvmTarget = '1.8'
+    }
+
+    defaultConfig {
+        applicationId 'com.debdownplus.debdown_plus'
+        minSdk 24
+        targetSdk 34
+        versionCode 1337
+        versionName '6.6.6'
+        multiDexEnabled true
+        
+        // Native libraries
+        ndk {
+            abiFilters 'arm64-v8a', 'armeabi-v7a', 'x86_64'
+        }
+    }
+
+    buildTypes {
+        release {
+            signingConfig signingConfigs.debug
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+        debug {
+            signingConfig signingConfigs.debug
+            minifyEnabled false
+        }
+    }
+
+    packagingOptions {
+        pickFirst 'lib/arm64-v8a/libffmpeg.so'
+        pickFirst 'lib/arm64-v8a/libflutter.so'
+        pickFirst 'lib/armeabi-v7a/libffmpeg.so'
+        pickFirst 'lib/x86_64/libffmpeg.so'
+        jniLibs {
+            useLegacyPackaging = true
+        }
+    }
+
+    flutter {
+        source '../..'
+    }
+}
+
+flutter {
+    assets {
+        // yt-dlp binary will be bundled here
+    }
+}
+
+dependencies {
+    implementation 'androidx.core:core-ktx:1.12.0'
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'com.google.android.material:material:1.11.0'
+    implementation 'androidx.activity:activity-ktx:1.8.2'
+    implementation 'androidx.fragment:fragment-ktx:1.6.2'
+    implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.7.0'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
+    
+    // Permission handling
+    implementation 'com.github.hotchemi:permissionsdispatcher:4.9.0'
+    annotationProcessor 'com.github.hotchemi:permissionsdispatcher-processor:4.9.0'
+    
+    // FileProvider
+    implementation 'androidx.core:core:1.12.0'
+}
