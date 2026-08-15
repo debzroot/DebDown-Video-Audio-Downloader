@@ -1,11 +1,22 @@
-include ':app'
-
-// Apply Flutter plugin
-def flutterProjectRoot = rootProject.projectDir.parentFile.toString()
-def flutterSdkPath = System.getenv('FLUTTER_ROOT')
-if (flutterSdkPath == null) {
-    throw GradleException('FLUTTER_ROOT environment variable not set')
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+    plugins {
+        id 'dev.flutter.flutter-gradle-plugin' version '3.24.0'
+    }
 }
 
-def flutterGradlePlugin = "${flutterSdkPath}/packages/flutter_tools/gradle/flutter.gradle"
-apply from: flutterGradlePlugin
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+rootProject.name = 'DebDownPlus'
+
+include ':app'

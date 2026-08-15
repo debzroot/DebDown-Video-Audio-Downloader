@@ -56,8 +56,8 @@ android {
 }
 
 flutter {
-    // This is the new declarative syntax
-    // source directory is auto-detected from settings.gradle
+    // Flutter source is at project root (two levels up from android/app)
+    source = '../../'
 }
 
 dependencies {
