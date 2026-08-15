@@ -53,15 +53,11 @@ android {
             useLegacyPackaging = true
         }
     }
-
-    flutter {
-        source '../..'
-    }
 }
 
 flutter {
-    assets {
-    }
+    // This is the new declarative syntax
+    // source directory is auto-detected from settings.gradle
 }
 
 dependencies {

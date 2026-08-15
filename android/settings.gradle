@@ -1,6 +1,6 @@
 include ':app'
 
-// Flutter
+// Apply Flutter plugin
 def flutterProjectRoot = rootProject.projectDir.parentFile.toString()
 def flutterSdkPath = System.getenv('FLUTTER_ROOT')
 if (flutterSdkPath == null) {
