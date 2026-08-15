@@ -36,17 +36,18 @@ jobs:
           packages: 'platforms;android-34 build-tools;34.0.0 ndk;26.1.10909125'
           accept-android-sdk-licenses: true
 
-      - name: Setup Flutter (stable 3.22+)
+      - name: Setup Flutter (3.19.6 - stable dengan Gradle 8.1)
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.22.3'
+          flutter-version: '3.19.6'
           channel: 'stable'
           cache: true
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
         with:
-          gradle-version: '8.1'
+          packages: 'platforms;android-34 build-tools;34.0.0 ndk;26.1.10909125'
+          accept-android-sdk-licenses: true
 
       - name: Create local.properties
         run: |
@@ -56,37 +57,32 @@ jobs:
           echo "flutter.versionName=6.6.7" >> android/local.properties
           echo "flutter.versionCode=1337" >> android/local.properties
 
-      - name: Generate Gradle wrapper
-        run: |
-          cd android
-          gradle wrapper --gradle-version 8.1
+      - name: Get dependencies
+        run: flutter pub get
 
-      - name: Build with Gradle (bypass Flutter validation)
-        env:
-          FLUTTER_ROOT: ${{ env.FLUTTER_ROOT }}
-        run: |
-          cd android
-          chmod +x gradlew
-          ./gradlew :app:assembleRelease --no-daemon --stacktrace
+      - name: Build APK (split per ABI)
+        run: flutter build apk --release --split-per-abi
+
+      - name: Build Universal APK
+        run: flutter build apk --release
 
       - name: List outputs
         run: |
-          echo "=== APKs ==="
-          find android/app/build/outputs -name "*.apk" -type f | xargs ls -la
-
-      - name: Copy APKs to root
-        run: |
-          mkdir -p release-apks
-          cp android/app/build/outputs/apk/release/*.apk release-apks/ 2>/dev/null || true
-          cp android/app/build/outputs/flutter-apk/*.apk release-apks/ 2>/dev/null || true
-          ls -la release-apks/
+          echo "=== Split APKs ==="
+          ls -la build/app/outputs/flutter-apk/
+          echo ""
+          echo "=== Universal APK ==="
+          ls -la build/app/outputs/flutter-apk/app-release.apk
 
       - name: Create Release
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            release-apks/*.apk
+            build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+            build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk
+            build/app/outputs/flutter-apk/app-x86_64-release.apk
+            build/app/outputs/flutter-apk/app-release.apk
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -96,5 +92,5 @@ jobs:
         with:
           name: debdown-apks-${{ github.ref_name || github.run_id }}
           path: |
-            release-apks/*.apk
+            build/app/outputs/flutter-apk/*.apk
           retention-days: 90
