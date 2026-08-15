@@ -4,16 +4,27 @@ buildscript {
         mavenCentral()
         gradlePluginPortal()
     }
-    ext.kotlin_version = '1.8.22'
     dependencies {
         classpath 'com.android.tools.build:gradle:8.1.2'
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
-        classpath 'com.google.gms:google-services:4.4.0'
+        classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:1.8.22'
     }
 }
 
+// Apply Flutter plugin to app module
+def flutterProjectRoot = rootProject.projectDir.parentFile.toString()
+def flutterSdkPath = System.getenv('FLUTTER_ROOT')
+if (flutterSdkPath == null) {
+    throw new org.gradle.api.GradleException('FLUTTER_ROOT environment variable not set')
+}
+
+def flutterGradlePlugin = "${flutterSdkPath}/packages/flutter_tools/gradle/flutter.gradle"
+apply from: flutterGradlePlugin
+
 allprojects {
-    // Repositories are now defined in settings.gradle
+    repositories {
+        google()
+        mavenCentral()
+    }
 }
 
 rootProject.buildDir = '../build'

@@ -54,9 +54,8 @@ android {
     }
 }
 
-flutter {
-    source = '../../'
-}
+// Flutter plugin will be applied from root build.gradle
+// flutter { source = '../../' }
 
 dependencies {
     implementation 'androidx.core:core-ktx:1.10.0'
