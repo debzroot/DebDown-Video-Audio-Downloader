@@ -33,7 +33,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.19.6'
+          flutter-version: '3.16.0'
           channel: 'stable'
           cache: true
 
@@ -42,6 +42,14 @@ jobs:
         with:
           packages: 'platforms;android-34 build-tools;34.0.0 ndk;26.1.10909125'
           accept-android-sdk-licenses: true
+
+      - name: Create local.properties
+        run: |
+          echo "sdk.dir=/usr/local/lib/android/sdk" > android/local.properties
+          echo "flutter.sdk=${{ env.FLUTTER_ROOT }}" >> android/local.properties
+          echo "flutter.buildMode=release" >> android/local.properties
+          echo "flutter.versionName=6.6.7" >> android/local.properties
+          echo "flutter.versionCode=1337" >> android/local.properties
 
       - name: Get dependencies
         run: flutter pub get
