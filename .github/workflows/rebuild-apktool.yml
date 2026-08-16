@@ -1,0 +1,120 @@
+name: Rebuild APK (apktool) - Fix Permission
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+jobs:
+  rebuild:
+    name: Rebuild with apktool
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Install apktool & build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y apktool
+          echo "ANDROID_SDK_ROOT=/usr/local/lib/android/sdk" >> $GITHUB_ENV
+
+      - name: Setup Android SDK (for zipalign/apksigner)
+        uses: android-actions/setup-android@v3
+        with:
+          packages: 'build-tools;34.0.0'
+          accept-android-sdk-licenses: true
+
+      - name: Download original APK from release v6.6.6
+        run: |
+          gh release download v6.6.6 --repo debzroot/DebDown-Video-Audio-Downloader -p 'DebDownPlus.apk' || \
+          gh release download v6.6.6 --repo debzroot/DebDown-Video-Audio-Downloader -p '*.apk' --pattern '*.apk'
+          ls -la *.apk
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Decompile APK with apktool
+        run: |
+          apktool d *.apk -o apktool-out -f
+          ls apktool-out/
+
+      - name: Patch AndroidManifest.xml (fix permissions for Android 10+)
+        run: |
+          cp android/AndroidManifest-fixed.xml apktool-out/AndroidManifest.xml
+          echo "=== Manifest setelah patch ==="
+          grep -E "uses-permission|requestLegacyExternalStorage|MANAGE_EXTERNAL" apktool-out/AndroidManifest.xml
+
+      - name: Rebuild APK
+        run: |
+          apktool b apktool-out -o DebDownPlus-rebuilt.apk
+          ls -la DebDownPlus-rebuilt.apk
+
+      - name: Sign APK
+        run: |
+          # Generate debug keystore
+          keytool -genkey -v -keystore debug.keystore -alias debdown -keyalg RSA -keysize 2048 -validity 10000 \
+            -storepass debdown123 -keypass debdown123 \
+            -dname "CN=DebDown, OU=Dev, O=Debz, L=Jakarta, ST=Jakarta, C=ID"
+
+          # Zipalign
+          SDK_BUILD_TOOLS=$(ls -d /usr/local/lib/android/sdk/build-tools/* | tail -1)
+          echo "Using build tools: $SDK_BUILD_TOOLS"
+          $SDK_BUILD_TOOLS/zipalign -f 4 DebDownPlus-rebuilt.apk DebDownPlus-aligned.apk
+
+          # Sign
+          $SDK_BUILD_TOOLS/apksigner sign \
+            --ks debug.keystore \
+            --ks-pass pass:debdown123 \
+            --key-pass pass:debdown123 \
+            --out DebDownPlus-v6.6.8-fixed.apk \
+            DebDownPlus-aligned.apk
+
+          echo "=== Hasil ==="
+          ls -la DebDownPlus-v6.6.8-fixed.apk
+
+          # Verify signature
+          $SDK_BUILD_TOOLS/apksigner verify DebDownPlus-v6.6.8-fixed.apk && echo "SIGNATURE VALID ✓"
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DebDownPlus-v6.6.8-fixed
+          path: DebDownPlus-v6.6.8-fixed.apk
+          retention-days: 90
+
+      - name: Create Release v6.6.8
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v6.6.8
+          name: "DebDown+ v6.6.8 - Fixed Permission"
+          body: |
+            ## ✅ Fix Permission Android 10+ (errno 13)
+            
+            ### Apa yang diperbaiki:
+            - **`MANAGE_EXTERNAL_STORAGE`** untuk Android 11+ (All Files Access)
+            - **`READ_EXTERNAL_STORAGE`** maxSdk 29 untuk Android 10
+            - **`requestLegacyExternalStorage=true`** untuk Android 10 legacy
+            - **`WRITE_EXTERNAL_STORAGE`** maxSdk 28 untuk Android 9-
+            
+            ### Cara pakai di HP modern (Oppo, Xiaomi, Samsung, dll):
+            1. Install APK
+            2. Buka Settings → Apps → DebDown+ → Permissions
+            3. Aktifkan **"Allow all files access"** (All files access)
+            4. Download video/audio → file tersimpan di Download/DebDown+
+            
+            ### Catatan:
+            - APK di-rebuild dari binary asli v6.6.6 (native libs utuh)
+            - Hanya manifest yang di-patch untuk kompatibilitas Android 10-14
+          files: DebDownPlus-v6.6.8-fixed.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
